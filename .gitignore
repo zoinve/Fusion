@@ -1,0 +1,22 @@
+bin/
+obj/
+.vs/
+.idea/
+.dotnet/
+*.user
+*.suo
+*.pdb
+Package.StoreAssociation.xml
+
+# Build artifacts
+artifacts/
+
+# MSIX app packages
+**/AppPackages/
+
+# Node.js dependencies
+node_modules/
+
+# Local tooling data
+.appdata/
+.claude/

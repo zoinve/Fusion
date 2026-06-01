@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppName" xml:space="preserve"><value>Fusion</value></data>
+  <data name="Home" xml:space="preserve"><value>Ana Sayfa</value></data>
+  <data name="Explore" xml:space="preserve"><value>Keşfet</value></data>
+  <data name="Library" xml:space="preserve"><value>Kitaplık</value></data>
+  <data name="Search" xml:space="preserve"><value>Ara</value></data>
+  <data name="Settings" xml:space="preserve"><value>Ayarlar</value></data>
+  <data name="Login" xml:space="preserve"><value>Giriş</value></data>
+  <data name="Logout" xml:space="preserve"><value>Çıkış</value></data>
+  <data name="Play" xml:space="preserve"><value>Oynat</value></data>
+  <data name="Pause" xml:space="preserve"><value>Duraklat</value></data>
+  <data name="Next" xml:space="preserve"><value>Sonraki</value></data>
+  <data name="Previous" xml:space="preserve"><value>Önceki</value></data>
+  <data name="Volume" xml:space="preserve"><value>Ses</value></data>
+  <data name="PlayQueue" xml:space="preserve"><value>Oynatma Kuyruğu</value></data>
+  <data name="Like" xml:space="preserve"><value>Beğen</value></data>
+  <data name="Unlike" xml:space="preserve"><value>Beğenmekten Vazgeç</value></data>
+  <data name="Playlist" xml:space="preserve"><value>Çalma Listesi</value></data>
+  <data name="Album" xml:space="preserve"><value>Albüm</value></data>
+  <data name="Artist" xml:space="preserve"><value>Sanatçı</value></data>
+  <data name="MV" xml:space="preserve"><value>MV</value></data>
+  <data name="DailyRecommend" xml:space="preserve"><value>Günlük Öneriler</value></data>
+  <data name="PersonalFM" xml:space="preserve"><value>Kişisel FM</value></data>
+  <data name="NewAlbums" xml:space="preserve"><value>Yeni Albümler</value></data>
+  <data name="TopList" xml:space="preserve"><value>Liste Başı</value></data>
+  <data name="RecommendedPlaylists" xml:space="preserve"><value>Önerilen Çalma Listeleri</value></data>
+  <data name="RecommendedSongs" xml:space="preserve"><value>Önerilen Şarkılar</value></data>
+  <data name="Loading" xml:space="preserve"><value>Yükleniyor...</value></data>
+  <data name="LoadFailed" xml:space="preserve"><value>Yükleme Başarısız</value></data>
+  <data name="Retry" xml:space="preserve"><value>Tekrar Dene</value></data>
+  <data name="NoData" xml:space="preserve"><value>Veri Yok</value></data>
+  <data name="Save" xml:space="preserve"><value>Kaydet</value></data>
+  <data name="Cancel" xml:space="preserve"><value>İptal</value></data>
+  <data name="Delete" xml:space="preserve"><value>Sil</value></data>
+  <data name="Create" xml:space="preserve"><value>Oluştur</value></data>
+  <data name="Confirm" xml:space="preserve"><value>Onayla</value></data>
+  <data name="Close" xml:space="preserve"><value>Kapat</value></data>
+  <data name="ScanQRCode" xml:space="preserve"><value>QR kodu NetEase Cloud Music ile tarayın</value></data>
+  <data name="RefreshQRCode" xml:space="preserve"><value>QR Kodunu Yenile</value></data>
+  <data name="WaitingScan" xml:space="preserve"><value>Taranmayı bekliyor</value></data>
+  <data name="ScannedConfirm" xml:space="preserve"><value>Tarandı, lütfen telefonda onaylayın</value></data>
+  <data name="QRExpired" xml:space="preserve"><value>QR kodu süresi doldu</value></data>
+  <data name="LoginSuccess" xml:space="preserve"><value>Giriş başarılı</value></data>
+  <data name="WelcomeBack" xml:space="preserve"><value>Tekrar hoş geldiniz</value></data>
+  <data name="Theme" xml:space="preserve"><value>Tema</value></data>
+  <data name="Language" xml:space="preserve"><value>Dil</value></data>
+  <data name="MusicQuality" xml:space="preserve"><value>Müzik Kalitesi</value></data>
+  <data name="PlayMode" xml:space="preserve"><value>Oynatma Modu</value></data>
+  <data name="ListLoop" xml:space="preserve"><value>Liste Döngüsü</value></data>
+  <data name="SingleLoop" xml:space="preserve"><value>Tek Döngü</value></data>
+  <data name="Shuffle" xml:space="preserve"><value>Karıştır</value></data>
+  <data name="Proxy" xml:space="preserve"><value>Proxy</value></data>
+  <data name="About" xml:space="preserve"><value>Hakkında</value></data>
+</root>

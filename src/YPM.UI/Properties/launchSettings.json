@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "YPM.UI": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    },
+    "YPM.UI (Package)": {
+      "commandName": "MsixPackage",
+      "nativeDebugging": false
+    }
+  }
+}

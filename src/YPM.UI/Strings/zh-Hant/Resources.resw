@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppName" xml:space="preserve"><value>Fusion</value></data>
+  <data name="Home" xml:space="preserve"><value>首頁</value></data>
+  <data name="Explore" xml:space="preserve"><value>發現</value></data>
+  <data name="Library" xml:space="preserve"><value>音樂庫</value></data>
+  <data name="Search" xml:space="preserve"><value>搜尋</value></data>
+  <data name="Settings" xml:space="preserve"><value>設定</value></data>
+  <data name="Login" xml:space="preserve"><value>登入</value></data>
+  <data name="Logout" xml:space="preserve"><value>登出</value></data>
+  <data name="Play" xml:space="preserve"><value>播放</value></data>
+  <data name="Pause" xml:space="preserve"><value>暫停</value></data>
+  <data name="Next" xml:space="preserve"><value>下一首</value></data>
+  <data name="Previous" xml:space="preserve"><value>上一首</value></data>
+  <data name="Volume" xml:space="preserve"><value>音量</value></data>
+  <data name="PlayQueue" xml:space="preserve"><value>播放佇列</value></data>
+  <data name="Like" xml:space="preserve"><value>喜歡</value></data>
+  <data name="Unlike" xml:space="preserve"><value>取消喜歡</value></data>
+  <data name="Playlist" xml:space="preserve"><value>歌單</value></data>
+  <data name="Album" xml:space="preserve"><value>專輯</value></data>
+  <data name="Artist" xml:space="preserve"><value>藝人</value></data>
+  <data name="MV" xml:space="preserve"><value>MV</value></data>
+  <data name="DailyRecommend" xml:space="preserve"><value>每日推薦</value></data>
+  <data name="PersonalFM" xml:space="preserve"><value>私人FM</value></data>
+  <data name="NewAlbums" xml:space="preserve"><value>新碟上架</value></data>
+  <data name="TopList" xml:space="preserve"><value>排行榜</value></data>
+  <data name="RecommendedPlaylists" xml:space="preserve"><value>推薦歌單</value></data>
+  <data name="RecommendedSongs" xml:space="preserve"><value>推薦歌曲</value></data>
+  <data name="Loading" xml:space="preserve"><value>載入中...</value></data>
+  <data name="LoadFailed" xml:space="preserve"><value>載入失敗</value></data>
+  <data name="Retry" xml:space="preserve"><value>重試</value></data>
+  <data name="NoData" xml:space="preserve"><value>暫無資料</value></data>
+  <data name="Save" xml:space="preserve"><value>儲存</value></data>
+  <data name="Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Delete" xml:space="preserve"><value>刪除</value></data>
+  <data name="Create" xml:space="preserve"><value>建立</value></data>
+  <data name="Confirm" xml:space="preserve"><value>確認</value></data>
+  <data name="Close" xml:space="preserve"><value>關閉</value></data>
+  <data name="ScanQRCode" xml:space="preserve"><value>請使用網易雲音樂 App 掃碼登入</value></data>
+  <data name="RefreshQRCode" xml:space="preserve"><value>重新整理二維碼</value></data>
+  <data name="WaitingScan" xml:space="preserve"><value>等待掃碼</value></data>
+  <data name="ScannedConfirm" xml:space="preserve"><value>已掃碼，請在手機確認</value></data>
+  <data name="QRExpired" xml:space="preserve"><value>二維碼已過期</value></data>
+  <data name="LoginSuccess" xml:space="preserve"><value>登入成功</value></data>
+  <data name="WelcomeBack" xml:space="preserve"><value>歡迎回來</value></data>
+  <data name="Theme" xml:space="preserve"><value>主題</value></data>
+  <data name="Language" xml:space="preserve"><value>語言</value></data>
+  <data name="MusicQuality" xml:space="preserve"><value>音質</value></data>
+  <data name="PlayMode" xml:space="preserve"><value>播放模式</value></data>
+  <data name="ListLoop" xml:space="preserve"><value>列表循環</value></data>
+  <data name="SingleLoop" xml:space="preserve"><value>單曲循環</value></data>
+  <data name="Shuffle" xml:space="preserve"><value>隨機播放</value></data>
+  <data name="Proxy" xml:space="preserve"><value>代理</value></data>
+  <data name="About" xml:space="preserve"><value>關於</value></data>
+</root>

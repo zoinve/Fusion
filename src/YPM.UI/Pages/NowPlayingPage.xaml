@@ -1,0 +1,345 @@
+<Page
+    x:Class="YPM.UI.Pages.NowPlayingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="using:YPM.UI.Helpers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:YPM.Core.Models"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <ResourceDictionary>
+            <helpers:UriImageSourceConverter x:Key="UriImageSourceConverter" />
+            <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <helpers:BoolToOpacityConverter x:Key="HighlightedLyricOpacityConverter" TrueOpacity="1" FalseOpacity="0.42" />
+            <Style TargetType="Button" BasedOn="{StaticResource PlaybackFlatButtonStyle}" />
+            <Style TargetType="FontIcon" BasedOn="{StaticResource PlaybackFontIconStyle}" />
+            <Style TargetType="PathIcon" BasedOn="{StaticResource PlaybackPathIconStyle}" />
+
+            <Storyboard x:Key="ShowStoryboard">
+                <DoubleAnimation
+                    Storyboard.TargetName="RootTransform"
+                    Storyboard.TargetProperty="TranslateY"
+                    From="2000" To="0"
+                    Duration="0:0:0.4">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseOut" Exponent="7" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation
+                    Storyboard.TargetName="RootGrid"
+                    Storyboard.TargetProperty="Opacity"
+                    From="0" To="1"
+                    Duration="0:0:0.25" />
+            </Storyboard>
+
+            <Storyboard x:Key="HideStoryboard">
+                <DoubleAnimation
+                    Storyboard.TargetName="RootTransform"
+                    Storyboard.TargetProperty="TranslateY"
+                    From="0" To="2000"
+                    Duration="0:0:0.3">
+                    <DoubleAnimation.EasingFunction>
+                        <ExponentialEase EasingMode="EaseIn" Exponent="7" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation
+                    Storyboard.TargetName="RootGrid"
+                    Storyboard.TargetProperty="Opacity"
+                    From="1" To="0"
+                    Duration="0:0:0.2" />
+            </Storyboard>
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <Grid x:Name="RootGrid" Background="{ThemeResource PlayerBarBackgroundBrush}" KeyDown="OnPageKeyDown">
+        <Grid.RenderTransform>
+            <CompositeTransform x:Name="RootTransform" />
+        </Grid.RenderTransform>
+        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="14*" />
+            <ColumnDefinition Width="34*" />
+            <ColumnDefinition Width="9*" />
+            <ColumnDefinition Width="30*" />
+            <ColumnDefinition Width="13*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Player -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="13*" />
+                <RowDefinition Height="56*" />
+                <RowDefinition Height="12*" />
+                <RowDefinition Height="4*" />
+                <RowDefinition Height="8*" />
+                <RowDefinition Height="7*" />
+            </Grid.RowDefinitions>
+
+            <!-- Cover Area -->
+            <Grid Grid.Row="1">
+                <Viewbox Stretch="Uniform">
+                    <Border
+                        Width="500"
+                        Height="500"
+                        Background="{ThemeResource PlayerBarSubtleFillBrush}"
+                        CornerRadius="20">
+                        <Image
+                            Source="{x:Bind ViewModel.CurrentTrackCoverUrl, Converter={StaticResource UriImageSourceConverter}, ConverterParameter=full, Mode=OneWay}"
+                            Stretch="UniformToFill" />
+                    </Border>
+                </Viewbox>
+            </Grid>
+
+            <!-- Info Area -->
+            <StackPanel 
+                Grid.Row="2" 
+                VerticalAlignment="Center"
+                Spacing="2">
+                <TextBlock
+                    FontSize="24"
+                    FontWeight="SemiBold"
+                    MaxLines="1"
+                    Text="{x:Bind ViewModel.CurrentTrackName, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis" />
+                <TextBlock
+                    x:Name="ArtistNameText"
+                    FontSize="15"
+                    Opacity="0.6"
+                    MaxLines="1"
+                    Text="{x:Bind ViewModel.CurrentTrackArtistsText, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    IsTapEnabled="True"
+                    Tapped="OnArtistTapped" />
+                <TextBlock
+                    x:Name="AlbumNameText"
+                    FontSize="13"
+                    Opacity="0.45"
+                    MaxLines="1"
+                    Text="{x:Bind ViewModel.CurrentTrackAlbumName, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    Visibility="{x:Bind ViewModel.CurrentTrackAlbumName, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                    IsTapEnabled="True"
+                    Tapped="OnAlbumTapped" />
+                <TextBlock
+                    FontSize="13"
+                    Opacity="0.45"
+                    MaxLines="1"
+                    Text="{x:Bind ViewModel.AudioQualitySummary, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    Visibility="{x:Bind ViewModel.AudioQualitySummary, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+            </StackPanel>
+
+            <!-- Progress Area -->
+            <Grid Grid.Row="3" VerticalAlignment="Center">
+                <Grid RowSpacing="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid
+                        x:Name="ProgressBarHost"
+                        Grid.Row="0"
+                        Height="20"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        PointerCaptureLost="OnProgressBarPointerCaptureLost"
+                        PointerMoved="OnProgressBarPointerMoved"
+                        PointerPressed="OnProgressBarPointerPressed"
+                        PointerReleased="OnProgressBarPointerReleased"
+                        SizeChanged="OnProgressBarHostSizeChanged">
+                        <Border
+                            Height="4"
+                            VerticalAlignment="Center"
+                            Background="{ThemeResource PlayerBarTrackFillBrush}"
+                            CornerRadius="2" />
+                        <Border
+                            x:Name="ProgressFill"
+                            Width="0"
+                            Height="4"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Background="{ThemeResource PlayerBarAccentBrush}"
+                            CornerRadius="2" />
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <TextBlock
+                            FontSize="11"
+                            Opacity="0.45"
+                            Text="{x:Bind ViewModel.PositionText, Mode=OneWay}" />
+                        <TextBlock
+                            HorizontalAlignment="Right"
+                            FontSize="11"
+                            Opacity="0.45"
+                            Text="{x:Bind ViewModel.DurationText, Mode=OneWay}" />
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <!-- Control Area -->
+            <Grid Grid.Row="4" VerticalAlignment="Center">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="16">
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="6"
+                        Background="Transparent"
+                        Click="OnModeClick"
+                        CornerRadius="20">
+                        <FontIcon FontSize="16" Glyph="{x:Bind ViewModel.ModeGlyph, Mode=OneWay}" />
+                    </Button>
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="6"
+                        Background="Transparent"
+                        Click="OnPreviousClick"
+                        CornerRadius="20">
+                        <FontIcon FontSize="18" Glyph="{x:Bind PrevGlyph}" />
+                    </Button>
+                    <Button
+                        Width="56"
+                        Height="56"
+                        Padding="10"
+                        Background="Transparent"
+                        Click="OnPlayPauseClick"
+                        CornerRadius="28">
+                        <FontIcon FontSize="22" Glyph="{x:Bind ViewModel.PlayPauseGlyph, Mode=OneWay}" />
+                    </Button>
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="6"
+                        Background="Transparent"
+                        Click="OnNextClick"
+                        CornerRadius="20">
+                        <FontIcon FontSize="18" Glyph="{x:Bind NextGlyph}" />
+                    </Button>
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="4"
+                        Background="Transparent"
+                        Click="OnLikeClick"
+                        CornerRadius="20">
+                        <FontIcon FontSize="14" Glyph="{x:Bind ViewModel.LikeGlyph, Mode=OneWay}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Right Text Area -->
+        <Grid Grid.Column="3">
+            <!-- Lyrics Area -->
+            <Grid 
+                x:Name="RightPanel" 
+                SizeChanged="OnRightPanelSizeChanged">
+                <ProgressRing
+                    Width="24"
+                    Height="24"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    IsActive="{x:Bind ViewModel.IsLyricsLoading, Mode=OneWay}" />
+
+                <TextBlock
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Opacity="0.35"
+                    Text="No lyrics"
+                    Visibility="{x:Bind ViewModel.HasLyrics, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert, Mode=OneWay}" />
+
+                <ListView
+                    x:Name="LyricsListView"
+                    Padding="0"
+                    IsItemClickEnabled="False"
+                    ItemsSource="{x:Bind ViewModel.Lyrics, Mode=OneWay}"
+                    ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                    SelectionMode="None"
+                    Visibility="{x:Bind ViewModel.HasLyrics, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                    <ListView.Header>
+                        <Border x:Name="LyricsHeader" Height="0" />
+                    </ListView.Header>
+                    <ListView.Footer>
+                        <Border x:Name="LyricsFooter" Height="0" />
+                    </ListView.Footer>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:LyricLine">
+                            <StackPanel Padding="0,12" RenderTransformOrigin="0.5,0.5">
+                                <StackPanel.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                                </StackPanel.RenderTransform>
+                                <TextBlock
+                                    FontSize="24"
+                                    FontWeight="SemiBold"
+                                    Opacity="{x:Bind IsHighlighted, Converter={StaticResource HighlightedLyricOpacityConverter}, Mode=OneWay}"
+                                    Text="{x:Bind Text}"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    FontSize="16"
+                                    Opacity="0.45"
+                                    Text="{x:Bind TranslatedText}"
+                                    TextWrapping="Wrap"
+                                    Visibility="{x:Bind TranslatedText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </Grid>
+
+        <!-- Top Right Controls (Floating) -->
+        <StackPanel
+            Grid.Column="3"
+            Grid.ColumnSpan="2"
+            Height="64"
+            Padding="0,16,24,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Orientation="Horizontal"
+            Spacing="8">
+            <Button
+                x:Name="FullscreenButton"
+                Width="36"
+                Height="36"
+                Padding="6"
+                Background="Transparent"
+                Click="OnFullscreenClick"
+                CornerRadius="18">
+                <Grid>
+                    <FontIcon
+                        x:Name="ExpandIcon"
+                        FontSize="14"
+                        Glyph="{x:Bind FullscreenEnterGlyph}" />
+                    <FontIcon
+                        x:Name="CollapseIcon"
+                        FontSize="14"
+                        Glyph="{x:Bind FullscreenExitGlyph}"
+                        Visibility="Collapsed" />
+                </Grid>
+            </Button>
+
+            <Button
+                Width="36"
+                Height="36"
+                Padding="6"
+                Background="Transparent"
+                Click="OnDismissClick"
+                CornerRadius="18">
+                <FontIcon FontSize="16" Glyph="{x:Bind CollapsePageGlyph}" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</Page>

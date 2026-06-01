@@ -1,0 +1,197 @@
+<Page
+    x:Class="YPM.UI.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="using:YPM.UI.Helpers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:YPM.Core.Models"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <helpers:UriImageSourceConverter x:Key="UriImageSourceConverter" />
+
+        <Style x:Key="SectionContainerStyle" TargetType="StackPanel">
+            <Setter Property="MaxWidth" Value="1260" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Spacing" Value="18" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer x:Name="MainScrollViewer">
+        <StackPanel Padding="28,24,28,40" Spacing="40">
+            <Grid MaxWidth="1260" HorizontalAlignment="Center" ColumnSpacing="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel HorizontalAlignment="Left" Spacing="10">
+          
+                  
+                    <InfoBar
+                        IsOpen="{x:Bind ViewModel.ErrorMessage, Converter={StaticResource StringToBooleanConverter}, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                        Severity="Error" />
+                </StackPanel>
+
+                <ProgressRing
+                    Grid.Column="1"
+                    Width="36"
+                    Height="36"
+                    VerticalAlignment="Top"
+                    IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+            </Grid>
+
+            <StackPanel Style="{StaticResource SectionContainerStyle}">
+                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="推荐歌单" />
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.RecommendedPlaylists, Mode=OneWay}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout
+                            MinColumnSpacing="14"
+                            MinItemWidth="150"
+                            MinRowSpacing="18"
+                            ItemsJustification="Start"
+                            Orientation="Horizontal" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="model:PlaylistSummary">
+                            <StackPanel Width="150" Spacing="10" Background="Transparent" Tag="{x:Bind Id}" Tapped="OnPlaylistTapped">
+                                <Border Background="#121212" CornerRadius="14">
+                                    <Grid Width="150" Height="150">
+                                        <Image
+                                            Source="{x:Bind CoverUrl, Converter={StaticResource UriImageSourceConverter}, Mode=OneWay}"
+                                            Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock
+                                    Text="{x:Bind Name}"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Text="{x:Bind Copywriter}"
+                                    Opacity="0.68"
+                                    MaxLines="2"
+                                    TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
+
+            <StackPanel Style="{StaticResource SectionContainerStyle}">
+                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="推荐艺人" />
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.TopArtists, Mode=OneWay}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout
+                            MinColumnSpacing="14"
+                            MinItemWidth="150"
+                            MinRowSpacing="18"
+                            ItemsJustification="Start"
+                            Orientation="Horizontal" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="model:ArtistSummary">
+                            <StackPanel Width="150" Spacing="10" Tag="{x:Bind Id}" Tapped="OnArtistTapped">
+                                <Border Background="#111111" CornerRadius="75">
+                                    <Grid Width="150" Height="150">
+                                        <Image
+                                            Source="{x:Bind CoverUrl, Converter={StaticResource UriImageSourceConverter}, Mode=OneWay}"
+                                            Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock
+                                    Text="{x:Bind Name}"
+                                    HorizontalAlignment="Center"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    TextAlignment="Center"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
+
+            <StackPanel Style="{StaticResource SectionContainerStyle}">
+                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="新碟" />
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.NewAlbums, Mode=OneWay}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout
+                            MinColumnSpacing="14"
+                            MinItemWidth="150"
+                            MinRowSpacing="18"
+                            ItemsJustification="Start"
+                            Orientation="Horizontal" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="model:AlbumSummary">
+                            <StackPanel Width="150" Spacing="10" Background="Transparent" Tag="{x:Bind Id}" Tapped="OnAlbumTapped">
+                                <Border Background="#141414" CornerRadius="14">
+                                    <Grid Width="150" Height="150">
+                                        <Image
+                                            Source="{x:Bind CoverUrl, Converter={StaticResource UriImageSourceConverter}, Mode=OneWay}"
+                                            Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock
+                                    Text="{x:Bind Name}"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Text="{x:Bind ArtistName}"
+                                    Opacity="0.68"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
+
+            <StackPanel Style="{StaticResource SectionContainerStyle}">
+                <TextBlock Style="{StaticResource SectionTitleStyle}" Text="排行榜" />
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.TopLists, Mode=OneWay}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout
+                            MinColumnSpacing="14"
+                            MinItemWidth="150"
+                            MinRowSpacing="18"
+                            ItemsJustification="Start"
+                            Orientation="Horizontal" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="model:PlaylistSummary">
+                            <StackPanel Width="150" Spacing="10" Background="Transparent" Tag="{x:Bind Id}" Tapped="OnPlaylistTapped">
+                                <Border Background="#141414" CornerRadius="14">
+                                    <Grid Width="150" Height="150">
+                                        <Image
+                                            Source="{x:Bind CoverUrl, Converter={StaticResource UriImageSourceConverter}, Mode=OneWay}"
+                                            Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock
+                                    Text="{x:Bind Name}"
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Text="{x:Bind Copywriter}"
+                                    Opacity="0.68"
+                                    MaxLines="2"
+                                    TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

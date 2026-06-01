@@ -1,0 +1,349 @@
+<UserControl
+    x:Class="YPM.UI.Controls.PlayerBarControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="using:YPM.UI.Helpers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:YPM.Core.Models"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <helpers:UriImageSourceConverter x:Key="UriImageSourceConverter" />
+            <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <helpers:CurrentTrackHighlightConverter x:Key="CurrentTrackHighlightConverter" />
+            <Style TargetType="Button" BasedOn="{StaticResource PlaybackFlatButtonStyle}" />
+            <Style TargetType="FontIcon" BasedOn="{StaticResource PlaybackFontIconStyle}" />
+            <Style TargetType="PathIcon" BasedOn="{StaticResource PlaybackPathIconStyle}" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid
+        x:Name="PlayerBar"
+        Background="{ThemeResource PlayerBarBackgroundBrush}"
+        BorderBrush="{ThemeResource PlayerBarBorderBrush}"
+        BorderThickness="0,1,0,0"
+        Tapped="OnPlayerBarTapped">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="68" />
+        </Grid.RowDefinitions>
+
+        <Grid
+            x:Name="ProgressBarHost"
+            Visibility="{x:Bind ViewModel.ShowProgressBar, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+            VerticalAlignment="Top"
+            Height="4"
+            PointerPressed="OnProgressBarPointerPressed"
+            PointerMoved="OnProgressBarPointerMoved"
+            PointerReleased="OnProgressBarPointerReleased"
+            PointerCaptureLost="OnProgressBarPointerCaptureLost">
+            <Border
+                x:Name="ProgressTrack"
+                Background="{ThemeResource PlayerBarTrackFillBrush}"
+                CornerRadius="2" />
+            <Border
+                x:Name="ProgressFill"
+                HorizontalAlignment="Left"
+                Width="0"
+                Background="{ThemeResource PlayerBarAccentBrush}"
+                CornerRadius="2" />
+        </Grid>
+
+        <Grid Padding="16,4,16,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="10"
+                Visibility="{x:Bind ViewModel.ShowPlayer, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                <Border Width="44" Height="44" CornerRadius="6" Background="{ThemeResource PlayerBarSubtleFillBrush}">
+                    <Image
+                        Width="44"
+                        Height="44"
+                        Source="{x:Bind ViewModel.CurrentTrackCoverUrl, Converter={StaticResource UriImageSourceConverter}, Mode=OneWay}"
+                        Stretch="UniformToFill" />
+                </Border>
+                <StackPanel VerticalAlignment="Center" Spacing="1">
+                    <TextBlock
+                        MaxWidth="240"
+                        MaxLines="1"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Text="{x:Bind ViewModel.CurrentTrackName, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis" />
+                    <TextBlock
+                        MaxWidth="240"
+                        MaxLines="1"
+                        FontSize="12"
+                        Opacity="0.6"
+                        Text="{x:Bind ViewModel.CurrentTrackArtistsText, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Button
+                    x:Name="LikeButton"
+                    Width="32"
+                    Height="32"
+                    Padding="4"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    VerticalAlignment="Center"
+                    Click="OnLikeClick">
+                    <FontIcon
+                        FontSize="14"
+                        Glyph="{x:Bind ViewModel.LikeGlyph, Mode=OneWay}" />
+                </Button>
+            </StackPanel>
+
+            <TextBlock
+                FontSize="14"
+                Opacity="0.4"
+                Text="未在播放"
+                VerticalAlignment="Center"
+                Visibility="{x:Bind ViewModel.ShowEmptyState, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="14"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <Button
+                    x:Name="PreviousButton"
+                    Width="36"
+                    Height="36"
+                    Padding="6"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    Click="OnPreviousClick"
+                    CornerRadius="18">
+                    <FontIcon FontSize="16" Glyph="{x:Bind PrevGlyph, Mode=OneWay}" />
+                </Button>
+                <Button
+                    x:Name="PlayPauseButton"
+                    Width="44"
+                    Height="44"
+                    Padding="8"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    Click="OnPlayPauseClick"
+                    CornerRadius="22">
+                    <FontIcon FontSize="18" Glyph="{x:Bind ViewModel.PlayPauseGlyph, Mode=OneWay}" />
+                </Button>
+                <Button
+                    x:Name="NextButton"
+                    Width="36"
+                    Height="36"
+                    Padding="6"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    Click="OnNextClick"
+                    CornerRadius="18">
+                    <FontIcon FontSize="16" Glyph="{x:Bind NextGlyph, Mode=OneWay}" />
+                </Button>
+            </StackPanel>
+
+            <StackPanel
+                Grid.Column="2"
+                Orientation="Horizontal"
+                Spacing="2"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center">
+                <TextBlock
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Opacity="0.5">
+                    <Run Text="{x:Bind ViewModel.PositionText, Mode=OneWay}" />
+                    <Run Text=" / " />
+                    <Run Text="{x:Bind ViewModel.DurationText, Mode=OneWay}" />
+                </TextBlock>
+                <Button
+                    x:Name="QueueButton"
+                    Width="32"
+                    Height="32"
+                    Padding="4"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    CornerRadius="16">
+                    <Button.Flyout>
+                        <Flyout x:Name="QueueFlyout" Placement="Top">
+                            <Flyout.FlyoutPresenterStyle>
+                                <Style TargetType="FlyoutPresenter">
+                                    <Setter Property="Padding" Value="12" />
+                                    <Setter Property="BorderThickness" Value="1" />
+                                    <Setter Property="BorderBrush" Value="{ThemeResource PlayerBarBorderBrush}" />
+                                    <Setter Property="Background" Value="{ThemeResource PlayerBarBackgroundBrush}" />
+                                    <Setter Property="CornerRadius" Value="18" />
+                                </Style>
+                            </Flyout.FlyoutPresenterStyle>
+                            <Grid Width="360" MaxHeight="{x:Bind QueueFlyoutMaxHeight, Mode=OneWay}" RowSpacing="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock FontSize="14" FontWeight="SemiBold" Text="当前列表" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Opacity="0.55"
+                                        Text="{x:Bind ViewModel.QueueTracks.Count, Mode=OneWay}" />
+                                </Grid>
+
+                                <Grid Grid.Row="1">
+                                    <ListView
+                                        x:Name="QueueListView"
+                                        Padding="0"
+                                        IsItemClickEnabled="True"
+                                        ItemClick="OnQueueItemClick"
+                                        ItemsSource="{x:Bind ViewModel.QueueTracks, Mode=OneWay}"
+                                        MaxHeight="{x:Bind QueueFlyoutMaxHeight, Mode=OneWay}"
+                                        SelectionMode="None">
+                                        <ListView.ItemContainerStyle>
+                                            <Style TargetType="ListViewItem">
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="Padding" Value="0" />
+                                            </Style>
+                                        </ListView.ItemContainerStyle>
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="models:TrackInfo">
+                                                <Grid
+                                                    MinHeight="44"
+                                                    Padding="4,6"
+                                                    CornerRadius="6"
+                                                    Background="{x:Bind Id, Mode=OneWay, Converter={StaticResource CurrentTrackHighlightConverter}}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock
+                                                            MaxLines="1"
+                                                            FontSize="13"
+                                                            FontWeight="SemiBold"
+                                                            Text="{x:Bind Name, Mode=OneWay}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            MaxLines="1"
+                                                            FontSize="11"
+                                                            Opacity="0.6"
+                                                            Text="{x:Bind ArtistsText, Mode=OneWay}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <TextBlock
+                                                        Grid.Column="1"
+                                                        Margin="12,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="11"
+                                                        Opacity="0.5"
+                                                        Text="{x:Bind DurationText, Mode=OneWay}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="13"
+                                        Opacity="0.45"
+                                        Text="当前列表为空"
+                                        Visibility="{x:Bind ViewModel.HasQueue, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert, Mode=OneWay}" />
+                                </Grid>
+                            </Grid>
+                        </Flyout>
+                    </Button.Flyout>
+                    <FontIcon FontSize="14" Glyph="{x:Bind QueueGlyph, Mode=OneWay}" />
+                </Button>
+                <Button
+                    x:Name="ModeButton"
+                    Width="32"
+                    Height="32"
+                    Padding="4"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    Click="OnModeClick"
+                    CornerRadius="16">
+                    <FontIcon FontSize="14" Glyph="{x:Bind ViewModel.ModeGlyph, Mode=OneWay}" />
+                </Button>
+                <Button
+                    x:Name="VolumeButton"
+                    Width="32"
+                    Height="32"
+                    Padding="4"
+                    Background="Transparent"
+                    Tapped="OnInteractiveElementTapped"
+                    Click="OnVolumeClick"
+                    PointerEntered="OnVolumeButtonPointerEntered"
+                    CornerRadius="16">
+                    <Button.Flyout>
+                        <Flyout x:Name="VolumeFlyout" Placement="Top" Opened="OnVolumeFlyoutOpened">
+                            <Flyout.FlyoutPresenterStyle>
+                                <Style TargetType="FlyoutPresenter">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="CornerRadius" Value="16" />
+                                </Style>
+                            </Flyout.FlyoutPresenterStyle>
+                            <Border
+                                Padding="10,12"
+                                Background="{ThemeResource PlayerBarBackgroundBrush}"
+                                BorderBrush="{ThemeResource PlayerBarBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="16">
+                                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Opacity="0.8"
+                                        Text="{x:Bind ViewModel.VolumePercentText, Mode=OneWay}" />
+                                    <Grid
+                                        x:Name="VolumeBarHost"
+                                        Width="24"
+                                        Height="120"
+                                        Background="Transparent"
+                                        SizeChanged="OnVolumeBarHostSizeChanged"
+                                        PointerPressed="OnVolumeBarPointerPressed"
+                                        PointerMoved="OnVolumeBarPointerMoved"
+                                        PointerReleased="OnVolumeBarPointerReleased"
+                                        PointerCaptureLost="OnVolumeBarPointerCaptureLost">
+                                        <Border
+                                            x:Name="VolumeTrack"
+                                            Width="4"
+                                            HorizontalAlignment="Center"
+                                            Background="{ThemeResource PlayerBarTrackFillBrush}"
+                                            CornerRadius="2" />
+                                        <Border
+                                            x:Name="VolumeFill"
+                                            Width="4"
+                                            Height="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Bottom"
+                                            Background="{ThemeResource PlayerBarAccentBrush}"
+                                            CornerRadius="2" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Flyout>
+                    </Button.Flyout>
+                    <FontIcon FontSize="14" Glyph="{x:Bind ViewModel.VolumeGlyph, Mode=OneWay}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

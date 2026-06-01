@@ -1,0 +1,74 @@
+<Window
+    x:Class="YPM.UI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:YPM.UI"
+    xmlns:controls="using:YPM.UI.Controls"
+    xmlns:pages="using:YPM.UI.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border
+            x:Name="TitleBarHost"
+            Grid.Row="0"
+            Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <Grid x:Name="TitleBarDragRegion">
+                <TextBlock
+                    Margin="16,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Opacity="0.68"
+                    Text="Fusion" />
+            </Grid>
+        </Border>
+
+        <NavigationView
+            x:Name="RootNavigationView"
+            Grid.Row="1"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            SelectionChanged="OnSelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="首页" Icon="Home" Tag="home" />
+                <NavigationViewItem Content="搜索" Tag="search">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE721;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="我的" Tag="library">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE77B;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem Content="设置" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+            <Frame x:Name="RootFrame" />
+        </NavigationView>
+
+        <!-- Player Bar Control -->
+        <controls:PlayerBarControl
+            Grid.Row="2"
+            x:Name="PlayerBarControl" />
+
+        <!-- Now Playing Page overlay -->
+        <pages:NowPlayingPage
+            Grid.Row="0"
+            Grid.RowSpan="3"
+            x:Name="NowPlayingPage"
+            Visibility="Collapsed" />
+    </Grid>
+</Window>
