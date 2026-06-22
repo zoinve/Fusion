@@ -56,8 +56,8 @@ public interface INeteaseApiClient
     Task<ApiResponse<object>> FollowUserAsync(long id, bool follow, CancellationToken cancellationToken = default);
 
     // ── Playlist ───────────────────────────────────────────────
-    Task<PlaylistDetail?> GetPlaylistDetailAsync(long id, int? s = null, CancellationToken cancellationToken = default);
-    Task<List<TrackInfo>> GetPlaylistAllTracksAsync(long id, int limit = 0, int offset = 0, CancellationToken cancellationToken = default);
+    Task<PlaylistDetail?> GetPlaylistDetailAsync(long id, int? s = null, bool skipCache = false, CancellationToken cancellationToken = default);
+    Task<List<TrackInfo>> GetPlaylistAllTracksAsync(long id, int limit = 0, int offset = 0, bool skipCache = false, CancellationToken cancellationToken = default);
     Task<PlaylistDetailDynamic?> GetPlaylistDetailDynamicAsync(long id, CancellationToken cancellationToken = default);
     Task<ApiResponse<PlaylistDetail>> CreatePlaylistAsync(string name, string? privacy = null, string? type = null, CancellationToken cancellationToken = default);
     Task<ApiResponse<object>> DeletePlaylistAsync(string ids, CancellationToken cancellationToken = default);
@@ -148,7 +148,24 @@ public interface INeteaseApiClient
     Task<DailyRecommendSongsResult> GetDailyRecommendSongsAsync(CancellationToken cancellationToken = default);
     Task<DailyRecommendPlaylistsResult> GetDailyRecommendPlaylistsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PersonalFmTrack>> GetPersonalFmAsync(CancellationToken cancellationToken = default);
-    Task<ApiResponse<object>> ScrobbleFmAsync(long id, long? sourceId = null, long? time = null, CancellationToken cancellationToken = default);
+    Task<ApiResponse<object>> ScrobbleV1Async(
+        long id,
+        long time,
+        long? sourceId = null,
+        string? source = null,
+        string? name = null,
+        string? artist = null,
+        long? bitrate = null,
+        string? level = null,
+        long? total = null,
+        CancellationToken cancellationToken = default);
+    Task<ApiResponse<object>> SubmitPlayStateAsync(
+        long id,
+        string? sessionId = null,
+        long? progress = null,
+        string? playMode = null,
+        string? type = null,
+        CancellationToken cancellationToken = default);
 
     // ── Liked / Library ────────────────────────────────────────
     Task<IReadOnlyList<long>> GetLikedTrackIdsAsync(long uid, CancellationToken cancellationToken = default);

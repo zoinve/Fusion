@@ -12,7 +12,6 @@ namespace YPM.UI.Controls;
 public sealed partial class PlayerBarControl : UserControl
 {
     private PlayerBarViewModel? _viewModel;
-    private bool _isSeeking;
     private bool _isAdjustingVolume;
     private double _queueFlyoutMaxHeight = 420;
 
@@ -125,47 +124,6 @@ public sealed partial class PlayerBarControl : UserControl
     private void OnVolumeBarHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateVolumeVisual();
-    }
-
-    private void OnProgressBarPointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        _isSeeking = true;
-        ProgressBarHost.CapturePointer(e.Pointer);
-        SeekFromPoint(e.GetCurrentPoint(ProgressBarHost).Position.X);
-    }
-
-    private void OnProgressBarPointerMoved(object sender, PointerRoutedEventArgs e)
-    {
-        if (_isSeeking)
-        {
-            SeekFromPoint(e.GetCurrentPoint(ProgressBarHost).Position.X);
-        }
-    }
-
-    private void OnProgressBarPointerReleased(object sender, PointerRoutedEventArgs e)
-    {
-        if (_isSeeking)
-        {
-            SeekFromPoint(e.GetCurrentPoint(ProgressBarHost).Position.X);
-            _isSeeking = false;
-            ProgressBarHost.ReleasePointerCapture(e.Pointer);
-        }
-    }
-
-    private void OnProgressBarPointerCaptureLost(object sender, PointerRoutedEventArgs e)
-    {
-        _isSeeking = false;
-    }
-
-    private void SeekFromPoint(double x)
-    {
-        if (_viewModel is null || ProgressBarHost.ActualWidth <= 0)
-        {
-            return;
-        }
-
-        var percent = Math.Clamp(x / ProgressBarHost.ActualWidth * 100d, 0, 100);
-        _viewModel.SeekTo(percent);
     }
 
     private void OnVolumeBarPointerPressed(object sender, PointerRoutedEventArgs e)

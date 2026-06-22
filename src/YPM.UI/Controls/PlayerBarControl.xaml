@@ -33,11 +33,7 @@
             x:Name="ProgressBarHost"
             Visibility="{x:Bind ViewModel.ShowProgressBar, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
             VerticalAlignment="Top"
-            Height="4"
-            PointerPressed="OnProgressBarPointerPressed"
-            PointerMoved="OnProgressBarPointerMoved"
-            PointerReleased="OnProgressBarPointerReleased"
-            PointerCaptureLost="OnProgressBarPointerCaptureLost">
+            Height="4">
             <Border
                 x:Name="ProgressTrack"
                 Background="{ThemeResource PlayerBarTrackFillBrush}"
@@ -174,41 +170,49 @@
                         <Flyout x:Name="QueueFlyout" Placement="Top">
                             <Flyout.FlyoutPresenterStyle>
                                 <Style TargetType="FlyoutPresenter">
-                                    <Setter Property="Padding" Value="12" />
-                                    <Setter Property="BorderThickness" Value="1" />
-                                    <Setter Property="BorderBrush" Value="{ThemeResource PlayerBarBorderBrush}" />
-                                    <Setter Property="Background" Value="{ThemeResource PlayerBarBackgroundBrush}" />
-                                    <Setter Property="CornerRadius" Value="18" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="CornerRadius" Value="0" />
+                                    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+                                    <Setter Property="ScrollViewer.VerticalScrollMode" Value="Disabled" />
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
-                            <Grid Width="360" MaxHeight="{x:Bind QueueFlyoutMaxHeight, Mode=OneWay}" RowSpacing="10">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
+                            <Border
+                                Padding="12"
+                                Background="{ThemeResource PlayerBarBackgroundBrush}"
+                                BorderBrush="{ThemeResource PlayerBarBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="18">
+                                <Grid Width="360" MaxHeight="{x:Bind QueueFlyoutMaxHeight, Mode=OneWay}" RowSpacing="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
 
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock FontSize="14" FontWeight="SemiBold" Text="当前列表" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        FontSize="11"
-                                        Opacity="0.55"
-                                        Text="{x:Bind ViewModel.QueueTracks.Count, Mode=OneWay}" />
-                                </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="当前列表" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Opacity="0.55"
+                                            Text="{x:Bind ViewModel.QueueTracks.Count, Mode=OneWay}" />
+                                    </Grid>
 
-                                <Grid Grid.Row="1">
                                     <ListView
                                         x:Name="QueueListView"
+                                        Grid.Row="1"
                                         Padding="0"
+                                        BorderThickness="0"
+                                        Background="Transparent"
                                         IsItemClickEnabled="True"
                                         ItemClick="OnQueueItemClick"
                                         ItemsSource="{x:Bind ViewModel.QueueTracks, Mode=OneWay}"
-                                        MaxHeight="{x:Bind QueueFlyoutMaxHeight, Mode=OneWay}"
                                         SelectionMode="None">
                                         <ListView.ItemContainerStyle>
                                             <Style TargetType="ListViewItem">
@@ -254,6 +258,7 @@
                                     </ListView>
 
                                     <TextBlock
+                                        Grid.Row="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         FontSize="13"
@@ -261,7 +266,7 @@
                                         Text="当前列表为空"
                                         Visibility="{x:Bind ViewModel.HasQueue, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert, Mode=OneWay}" />
                                 </Grid>
-                            </Grid>
+                            </Border>
                         </Flyout>
                     </Button.Flyout>
                     <FontIcon FontSize="14" Glyph="{x:Bind QueueGlyph, Mode=OneWay}" />

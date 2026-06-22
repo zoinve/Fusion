@@ -13,8 +13,7 @@
         <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
 
         <Style x:Key="SectionContainerStyle" TargetType="StackPanel">
-            <Setter Property="MaxWidth" Value="1260" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Spacing" Value="18" />
         </Style>
 
@@ -27,7 +26,7 @@
         <Style x:Key="MoreButtonStyle" TargetType="HyperlinkButton">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="Padding" Value="24,8" />
         </Style>
 
@@ -101,10 +100,10 @@
                 </Border>
                 <TextBlock
                     Text="{x:Bind Name}"
-                    HorizontalAlignment="Center"
+                    HorizontalAlignment="Left"
                     FontSize="15"
                     FontWeight="SemiBold"
-                    TextAlignment="Center"
+                    TextAlignment="Left"
                     TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </DataTemplate>
@@ -139,7 +138,7 @@
             x:Name="EmptySearchBox"
             MaxWidth="3000"
             MinWidth="400"
-            HorizontalAlignment="Center"
+            HorizontalAlignment="Left"
             VerticalAlignment="Center"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             CornerRadius="24"
@@ -233,9 +232,9 @@
             </Border>
 
             <ScrollViewer Grid.Row="1" x:Name="MainScrollViewer">
-                <StackPanel Padding="28,12,28,40" Spacing="36">
+                <StackPanel HorizontalAlignment="Stretch" Padding="28,12,28,40" Spacing="36">
                 <!-- Status -->
-                <Grid MaxWidth="1260" HorizontalAlignment="Center" ColumnSpacing="20">
+            <Grid HorizontalAlignment="Stretch" ColumnSpacing="20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -385,11 +384,11 @@
                                     </Border>
                                     <TextBlock
                                         Text="{x:Bind Name}"
-                                        HorizontalAlignment="Center"
-                                        FontSize="15"
-                                        FontWeight="SemiBold"
-                                        TextAlignment="Center"
-                                        TextTrimming="CharacterEllipsis" />
+                                            HorizontalAlignment="Left"
+                                            FontSize="15"
+                                            FontWeight="SemiBold"
+                                            TextAlignment="Left"
+                                            TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsRepeater.ItemTemplate>

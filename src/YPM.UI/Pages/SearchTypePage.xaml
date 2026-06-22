@@ -44,7 +44,7 @@
         <ScrollViewer Grid.Row="1" x:Name="MainScrollViewer">
             <StackPanel Padding="28,16,28,40" Spacing="24">
                 <!-- Status -->
-                <Grid MaxWidth="1260" HorizontalAlignment="Center" ColumnSpacing="20">
+            <Grid MaxWidth="1260" HorizontalAlignment="Left" ColumnSpacing="20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -168,7 +168,7 @@
                 <!-- Load more button -->
                 <HyperlinkButton
                     x:Name="LoadMoreButton"
-                    HorizontalAlignment="Center"
+                    HorizontalAlignment="Left"
                     FontSize="14"
                     FontWeight="SemiBold"
                     Content="加载更多"

@@ -17,6 +17,7 @@ public sealed partial class SettingsPage : Page
     public string UserGlyph => IconGlyph.User;
     public string GlobeGlyph => IconGlyph.Globe;
     public string PaletteGlyph => IconGlyph.Palette;
+    public string HomeGlyph => IconGlyph.Home;
     public string SpeakerGlyph => IconGlyph.Speaker;
     public string WifiGlyph => IconGlyph.Wifi;
     public string InfoGlyph => IconGlyph.Info;

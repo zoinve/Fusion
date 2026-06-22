@@ -31,6 +31,33 @@ public sealed class UriImageSourceConverter : IValueConverter
             text = $"{text}{sep}param={ThumbnailSize}y{ThumbnailSize}";
         }
 
+        // Check image cache first
+        var cachedPath = App.ImageCacheService?.GetCachedFilePath(text);
+        if (cachedPath is not null)
+        {
+            var cachedBmp = new BitmapImage();
+            cachedBmp.UriSource = new Uri(cachedPath);
+            return cachedBmp;
+        }
+
+        // Not cached: use remote URL and trigger background caching
+        var cacheService = App.ImageCacheService;
+        if (cacheService is not null)
+        {
+            var urlToCache = text;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await cacheService.CacheImageAsync(urlToCache);
+                }
+                catch
+                {
+                    // Best-effort background caching — ignore failures
+                }
+            });
+        }
+
         if (!Uri.TryCreate(text, UriKind.Absolute, out var uri))
         {
             return null;

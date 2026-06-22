@@ -7,7 +7,6 @@ namespace YPM.UI.ViewModels;
 
 public sealed class LibraryViewModel : ObservableObject
 {
-    private readonly ILikedSongsService? _likedService;
     private bool _isLoading;
     private string _errorMessage = string.Empty;
     private int _selectedTabIndex;
@@ -17,14 +16,6 @@ public sealed class LibraryViewModel : ObservableObject
     public ObservableCollection<ArtistSummary> Artists { get; } = [];
     public ObservableCollection<MvInfo> Mvs { get; } = [];
     public ObservableCollection<TrackInfo> CloudDiskTracks { get; } = [];
-    public LibraryViewModel()
-    {
-        _likedService = App.LikedSongsService;
-        if (_likedService is not null)
-        {
-            _likedService.Refreshed += OnLikedRefreshed;
-        }
-    }
 
     public ObservableCollection<RecordItem> HistoryWeek { get; } = [];
     public ObservableCollection<RecordItem> HistoryAll { get; } = [];
@@ -53,14 +44,6 @@ public sealed class LibraryViewModel : ObservableObject
     public string UserName => CurrentUser?.Nickname ?? "未登录";
     public string UserAvatar => CurrentUser?.AvatarUrl ?? "";
 
-    private long LikedSongsCount { get; set; }
-    public string LikedSongsPlaylistId { get; private set; } = "";
-    public string LikedSongsText => $"我喜欢的音乐 ({LikedSongsCount:N0} 首)";
-    public bool HasLikedSongs => LikedSongsCount > 0;
-    public bool HasLikedSongsCovers => LikedSongsCovers.Count > 0;
-    public ObservableCollection<string> LikedSongsCovers { get; } = [];
-    public string LikedSongsLatestCoverUrl { get; private set; } = "";
-
     public async Task LoadAsync()
     {
         if (IsLoading || !IsLoggedIn) return;
@@ -79,9 +62,6 @@ public sealed class LibraryViewModel : ObservableObject
                 LoadSectionAsync(LoadMvsAsync, "MV", errors),
                 LoadSectionAsync(LoadCloudDiskAsync, "云盘", errors),
                 LoadSectionAsync(() => LoadHistoryAsync(uid), "听歌排行", errors));
-
-            OnPropertyChanged(nameof(LikedSongsText));
-            OnPropertyChanged(nameof(HasLikedSongs));
 
             if (errors.Count > 0)
             {
@@ -113,56 +93,8 @@ public sealed class LibraryViewModel : ObservableObject
     {
         var result = await App.ApiClient.GetUserPlaylistAsync(uid);
         Playlists.Clear();
-        if (result.Playlist.Count > 0)
-        {
-            LikedSongsPlaylistId = result.Playlist[0].Id.ToString();
-
-            foreach (var item in result.Playlist)
-                Playlists.Add(item);
-
-            await RefreshLikedSongsAsync();
-        }
-    }
-
-    private void OnLikedRefreshed(object? sender, EventArgs e)
-    {
-        // Only for like-button state changes — do NOT update count/covers from cache.
-        // Those always come from the API via LoadPlaylistsAsync.
-    }
-
-    public async Task RefreshLikedSongsAsync()
-    {
-        if (string.IsNullOrEmpty(LikedSongsPlaylistId)) return;
-
-        try
-        {
-            var likedPlaylist = await App.ApiClient.GetPlaylistDetailAsync(long.Parse(LikedSongsPlaylistId));
-            LikedSongsCount = likedPlaylist?.TrackCount ?? 0;
-            OnPropertyChanged(nameof(LikedSongsText));
-            OnPropertyChanged(nameof(HasLikedSongs));
-
-            LikedSongsCovers.Clear();
-            LikedSongsLatestCoverUrl = "";
-
-            if (likedPlaylist?.Tracks is { Count: > 0 })
-            {
-                // First track is the most recently liked song
-                var latestTrack = likedPlaylist.Tracks[0];
-                LikedSongsLatestCoverUrl = latestTrack.Album?.CoverUrl ?? "";
-                OnPropertyChanged(nameof(LikedSongsLatestCoverUrl));
-
-                // Populate 2x2 grid with up to 4 most recent tracks' album covers
-                foreach (var t in likedPlaylist.Tracks.Take(4))
-                {
-                    if (!string.IsNullOrWhiteSpace(t.Album?.CoverUrl))
-                        LikedSongsCovers.Add(t.Album.CoverUrl);
-                }
-            }
-
-            OnPropertyChanged(nameof(HasLikedSongsCovers));
-            OnPropertyChanged(nameof(LikedSongsCovers));
-        }
-        catch { }
+        foreach (var item in result.Playlist)
+            Playlists.Add(item);
     }
 
     private async Task LoadAlbumsAsync()
@@ -217,18 +149,6 @@ public sealed class LibraryViewModel : ObservableObject
         HistoryAll.Clear();
         foreach (var item in all.AllData.Where(i => i.Song is not null))
             HistoryAll.Add(item);
-    }
-
-    public async Task PlayLikedSongsAsync()
-    {
-        if (string.IsNullOrEmpty(LikedSongsPlaylistId) || App.AudioPlayer is null) return;
-
-        var playlist = await App.ApiClient.GetPlaylistDetailAsync(long.Parse(LikedSongsPlaylistId));
-        if (playlist?.Tracks is { Count: > 0 })
-        {
-            App.AudioPlayer.SetQueue(playlist.Tracks, 0);
-            await App.AudioPlayer.PlayAsync(0);
-        }
     }
 
     public async Task PlayTrackAsync(TrackInfo track)

@@ -64,18 +64,18 @@
                     CornerRadius="12"
                     Padding="24,20"
                     Visibility="{x:Bind LoginVM.ShowQrVisibility, Mode=OneWay}">
-                    <StackPanel Spacing="16" HorizontalAlignment="Center" MaxWidth="320">
-                        <TextBlock Text="{x:Bind LoginVM.WelcomeText, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <Border Width="200" Height="200" HorizontalAlignment="Center" CornerRadius="12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                    <StackPanel Spacing="16" HorizontalAlignment="Left" MaxWidth="320">
+                        <TextBlock Text="{x:Bind LoginVM.WelcomeText, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Left" />
+                        <Border Width="200" Height="200" HorizontalAlignment="Left" CornerRadius="12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
                             <Rectangle RadiusX="12" RadiusY="12">
                                 <Rectangle.Fill>
                                     <ImageBrush Stretch="Fill" ImageSource="{x:Bind LoginVM.QrImageBase64, Converter={StaticResource Base64ImageSourceConverter}, Mode=OneWay}" />
                                 </Rectangle.Fill>
                             </Rectangle>
                         </Border>
-                        <TextBlock Text="{x:Bind LoginVM.DescriptionText, Mode=OneWay}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="WrapWholeWords" Opacity="0.6" FontSize="13" />
-                        <TextBlock Text="{x:Bind LoginVM.Status, Mode=OneWay}" HorizontalAlignment="Center" Opacity="0.8" />
-                        <Button Content="刷新二维码" Command="{x:Bind LoginVM.RefreshQrCodeCommand}" HorizontalAlignment="Center" Width="140" />
+                        <TextBlock Text="{x:Bind LoginVM.DescriptionText, Mode=OneWay}" HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="WrapWholeWords" Opacity="0.6" FontSize="13" />
+                        <TextBlock Text="{x:Bind LoginVM.Status, Mode=OneWay}" HorizontalAlignment="Left" Opacity="0.8" />
+                        <Button Content="刷新二维码" Command="{x:Bind LoginVM.RefreshQrCodeCommand}" HorizontalAlignment="Left" Width="140" />
                     </StackPanel>
                 </Border>
 
@@ -85,9 +85,9 @@
                     CornerRadius="12"
                     Padding="24,20"
                     Visibility="{x:Bind LoginVM.ShowPhoneLoginVisibility, Mode=OneWay}">
-                    <StackPanel Spacing="16" HorizontalAlignment="Center" MaxWidth="320">
-                        <TextBlock Text="手机号登录" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <TextBlock Text="输入手机号获取验证码后登录" HorizontalAlignment="Center" TextAlignment="Center" Opacity="0.6" FontSize="13" />
+                    <StackPanel Spacing="16" HorizontalAlignment="Left" MaxWidth="320">
+                        <TextBlock Text="手机号登录" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Left" />
+                        <TextBlock Text="输入手机号获取验证码后登录" HorizontalAlignment="Left" TextAlignment="Left" Opacity="0.6" FontSize="13" />
 
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
@@ -125,20 +125,20 @@
 
                         <TextBlock
                             Text="{x:Bind LoginVM.CaptchaStatus, Mode=OneWay}"
-                            HorizontalAlignment="Center"
+                            HorizontalAlignment="Left"
                             Opacity="0.8"
                             FontSize="12" />
 
                         <Button
                             Content="登录"
                             Command="{x:Bind LoginVM.PhoneLoginCommand}"
-                            HorizontalAlignment="Center"
+                            HorizontalAlignment="Left"
                             Width="200"
                             Style="{StaticResource AccentButtonStyle}" />
 
                         <TextBlock
                             Text="{x:Bind LoginVM.LoginStatus, Mode=OneWay}"
-                            HorizontalAlignment="Center"
+                            HorizontalAlignment="Left"
                             Opacity="0.8"
                             FontSize="12"
                             Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
@@ -148,18 +148,18 @@
                 <!-- Login mode switch -->
                 <StackPanel
                     Spacing="8"
-                    HorizontalAlignment="Center"
+                    HorizontalAlignment="Left"
                     Visibility="{x:Bind LoginVM.ShowLoginModeSwitchVisibility, Mode=OneWay}">
                     <Button
                         Content="切换到手机号登录"
                         Command="{x:Bind LoginVM.SwitchToPhoneLoginCommand}"
                         Visibility="{x:Bind LoginVM.ShowQrActionsVisibility, Mode=OneWay}"
-                        HorizontalAlignment="Center" />
+                        HorizontalAlignment="Left" />
                     <Button
                         Content="切换到二维码登录"
                         Command="{x:Bind LoginVM.SwitchToQrLoginCommand}"
                         Visibility="{x:Bind LoginVM.ShowPhoneLoginActionsVisibility, Mode=OneWay}"
-                        HorizontalAlignment="Center" />
+                        HorizontalAlignment="Left" />
                 </StackPanel>
             </StackPanel>
 
@@ -213,6 +213,25 @@
                                 HorizontalAlignment="Right" />
                         </Grid>
                     </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Spacing="12">
+                <TextBlock Text="启动" FontSize="13" FontWeight="SemiBold" Opacity="0.5" />
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="20,16">
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="{x:Bind HomeGlyph}" FontSize="20" VerticalAlignment="Center" />
+                        <ComboBox
+                            Grid.Column="1"
+                            ItemsSource="{x:Bind ViewModel.StartPageOptions, Mode=OneWay}"
+                            SelectedItem="{x:Bind ViewModel.SelectedStartPage, Mode=TwoWay}"
+                            HorizontalAlignment="Right"
+                            MinWidth="180" />
+                    </Grid>
                 </Border>
             </StackPanel>
 

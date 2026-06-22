@@ -224,6 +224,7 @@ public sealed class SettingsViewModel : ObservableObject
                 OnPropertyChanged(nameof(CacheLimitText));
                 OnPropertyChanged(nameof(CacheLimitValue));
                 App.ReinitializeMusicCacheService();
+                App.ReinitializeImageCacheService();
                 _ = RefreshCacheSizeAsync();
             }
         }
@@ -240,6 +241,7 @@ public sealed class SettingsViewModel : ObservableObject
                 App.Settings.CacheLocation = value;
                 _ = SaveSettingsAsync();
                 App.ReinitializeMusicCacheService();
+                App.ReinitializeImageCacheService();
                 _ = RefreshCacheSizeAsync();
             }
         }
@@ -301,12 +303,34 @@ public sealed class SettingsViewModel : ObservableObject
         App.MainWindow.ApplyAcrylic(enable);
     }
 
+    // ── Start Page ──
+    public ObservableCollection<StartPageOption> StartPageOptions { get; } = new()
+    {
+        new StartPageOption("home", "首页"),
+        new StartPageOption("search", "搜索"),
+        new StartPageOption("library", "我的"),
+    };
+
+    private StartPageOption _selectedStartPage = null!;
+    public StartPageOption SelectedStartPage
+    {
+        get => _selectedStartPage;
+        set
+        {
+            if (SetProperty(ref _selectedStartPage, value) && value is not null)
+            {
+                App.Settings.StartPage = value.Value;
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
     // ── User Info ──
     public string? CurrentUserName => App.Settings.CurrentUser?.Nickname;
     public bool IsLoggedIn => App.Settings.CurrentUser is not null;
 
     // ── App Version ──
-    public string AppVersion => "1.0.0 (WinUI 3)";
+    public string AppVersion => "1.1.0 (WinUI 3)";
 
     // ── Load / Save ──
     public void LoadFromSettings()
@@ -367,6 +391,10 @@ public sealed class SettingsViewModel : ObservableObject
 
         _enableAcrylic = s.EnableAcrylic;
         OnPropertyChanged(nameof(EnableAcrylic));
+
+        // Start Page
+        _selectedStartPage = StartPageOptions.FirstOrDefault(o => o.Value == s.StartPage) ?? StartPageOptions[0];
+        OnPropertyChanged(nameof(SelectedStartPage));
     }
 
     private async Task SaveSettingsAsync()
@@ -384,16 +412,30 @@ public sealed class SettingsViewModel : ObservableObject
 
     public async Task RefreshCacheSizeAsync()
     {
-        if (App.MusicCacheService is null) return;
-        CurrentCacheSize = await App.MusicCacheService.GetCacheSizeAsync();
+        long totalSize = 0;
+        if (App.MusicCacheService is not null)
+            totalSize += await App.MusicCacheService.GetCacheSizeAsync();
+        if (App.ImageCacheService is not null)
+            totalSize += await App.ImageCacheService.GetCacheSizeAsync();
+
+        CurrentCacheSize = totalSize;
         OnPropertyChanged(nameof(CurrentCacheSizeText));
     }
 
     public async Task ClearCacheAsync()
     {
-        if (App.MusicCacheService is null) return;
-        await App.MusicCacheService.ClearAllAsync();
-        App.ReinitializeMusicCacheService();
+        if (App.MusicCacheService is not null)
+        {
+            await App.MusicCacheService.ClearAllAsync();
+            App.ReinitializeMusicCacheService();
+        }
+
+        if (App.ImageCacheService is not null)
+        {
+            await App.ImageCacheService.ClearAllAsync();
+            App.ReinitializeImageCacheService();
+        }
+
         await RefreshCacheSizeAsync();
     }
 
@@ -487,6 +529,19 @@ public sealed class ProxyProtocolOption
     public string Value { get; }
     public string DisplayName { get; }
     public ProxyProtocolOption(string value, string displayName)
+    {
+        Value = value;
+        DisplayName = displayName;
+    }
+
+    public override string ToString() => DisplayName;
+}
+
+public sealed class StartPageOption
+{
+    public string Value { get; }
+    public string DisplayName { get; }
+    public StartPageOption(string value, string displayName)
     {
         Value = value;
         DisplayName = displayName;

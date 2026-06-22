@@ -32,6 +32,8 @@ public class TrackInfo
 
     public string AlbumName => Album?.Name ?? string.Empty;
 
+    public string ListCoverUrl { get; set; } = string.Empty;
+
     public int DisplayIndex { get; set; }
 
     public string LikeGlyph => IsLiked ? "" : "";

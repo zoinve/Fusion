@@ -235,15 +235,6 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(VolumePercentText));
     }
 
-    public void SeekTo(double percent)
-    {
-        if (_duration.TotalMilliseconds > 0)
-        {
-            var pos = TimeSpan.FromMilliseconds(_duration.TotalMilliseconds * percent / 100);
-            _ = _player.SeekAsync(pos);
-        }
-    }
-
     public async Task ToggleLikeAsync()
     {
         if (_currentTrack is null) return;
@@ -281,7 +272,7 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
         _dispatcher.TryEnqueue(() =>
         {
             CurrentTrack = track;
-            Duration = _player.Duration;
+            Duration = ResolveDisplayDuration(track);
             IsPlayerAvailable = track is not null;
             OnPropertyChanged(nameof(ShowPlayer));
             OnPropertyChanged(nameof(ShowEmptyState));
@@ -294,6 +285,8 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(CurrentTrackName));
             OnPropertyChanged(nameof(CurrentTrackArtistsText));
             OnPropertyChanged(nameof(CurrentTrackCoverUrl));
+            OnPropertyChanged(nameof(DurationText));
+            OnPropertyChanged(nameof(ProgressValue));
         });
     }
 
@@ -313,7 +306,7 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
         _dispatcher.TryEnqueue(() =>
         {
             Position = position;
-            Duration = _player.Duration;
+            Duration = ResolveDisplayDuration(_currentTrack);
             OnPropertyChanged(nameof(PositionText));
             OnPropertyChanged(nameof(DurationText));
             OnPropertyChanged(nameof(ProgressValue));
@@ -352,7 +345,7 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
             CurrentTrack = _player.CurrentTrack;
             State = _player.State;
             Position = _player.Position;
-            Duration = _player.Duration;
+            Duration = ResolveDisplayDuration(_player.CurrentTrack);
             _volume = _player.Volume;
             _mode = _player.Mode;
             _isMuted = _player.IsMuted;
@@ -378,6 +371,18 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(ModeTooltip));
             OnPropertyChanged(nameof(LikeGlyph));
         });
+    }
+
+    private TimeSpan ResolveDisplayDuration(TrackInfo? track)
+    {
+        if (_player.Duration > TimeSpan.Zero)
+        {
+            return _player.Duration;
+        }
+
+        return track is not null && track.Duration > 0
+            ? TimeSpan.FromMilliseconds(track.Duration)
+            : TimeSpan.Zero;
     }
 
     private void OnLikedStateChanged(object? sender, long trackId)

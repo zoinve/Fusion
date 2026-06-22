@@ -44,7 +44,7 @@
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     CornerRadius="12"
                     Padding="40,32">
-                    <StackPanel HorizontalAlignment="Center" Spacing="12">
+                    <StackPanel HorizontalAlignment="Left" Spacing="12">
                         <FontIcon Glyph="&#xE77B;" FontSize="48" Opacity="0.4" />
                         <TextBlock Text="请先登录以查看音乐库" FontSize="16" Opacity="0.6" />
                     </StackPanel>
@@ -68,69 +68,6 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Liked Songs Card -->
-                    <Button
-                        Click="OnLikedSongsClick"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        CornerRadius="12"
-                        Padding="18"
-                        HorizontalAlignment="Left"
-                        HorizontalContentAlignment="Stretch">
-                        <Grid ColumnSpacing="18">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <!-- Cover: fallback single image when no track covers -->
-                            <Border
-                                Grid.Column="0"
-                                Width="216" Height="216"
-                                CornerRadius="8"
-                                Visibility="{x:Bind ViewModel.HasLikedSongsCovers, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
-                                <Image
-                                    Width="216" Height="216"
-                                    Source="{x:Bind ViewModel.LikedSongsLatestCoverUrl, Mode=OneWay, Converter={StaticResource UriImageSourceConverter}}"
-                                    Stretch="UniformToFill" />
-                            </Border>
-                            <!-- 2x2 cover grid -->
-                            <ItemsRepeater
-                                Grid.Column="0"
-                                Width="216" Height="216"
-                                ItemsSource="{x:Bind ViewModel.LikedSongsCovers, Mode=OneWay}"
-                                Visibility="{x:Bind ViewModel.HasLikedSongsCovers, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <ItemsRepeater.Layout>
-                                    <UniformGridLayout
-                                        MinColumnSpacing="4"
-                                        MinItemWidth="106"
-                                        MinRowSpacing="4"
-                                        MaximumRowsOrColumns="2"
-                                        ItemsJustification="Start"
-                                        Orientation="Horizontal" />
-                                </ItemsRepeater.Layout>
-                                <ItemsRepeater.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Border Width="106" Height="106" CornerRadius="8">
-                                            <Image
-                                                Width="106" Height="106"
-                                                Source="{x:Bind Mode=OneWay, Converter={StaticResource UriImageSourceConverter}}"
-                                                Stretch="UniformToFill" />
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsRepeater.ItemTemplate>
-                            </ItemsRepeater>
-                            <!-- Text -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                                <TextBlock
-                                    Text="{x:Bind ViewModel.LikedSongsText, Mode=OneWay}"
-                                    FontSize="16"
-                                    FontWeight="SemiBold" />
-                                <TextBlock
-                                    Text="点击查看全部"
-                                    FontSize="12"
-                                    Opacity="0.5" />
-                            </StackPanel>
-                        </Grid>
-                    </Button>
                 </StackPanel>
 
                 <!-- Tab Bar -->
@@ -348,6 +285,7 @@
                                 <Grid Padding="8,6" ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="40" />
+                                        <ColumnDefinition Width="48" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="56" />
                                     </Grid.ColumnDefinitions>
@@ -357,7 +295,19 @@
                                         FontSize="13"
                                         Opacity="0.5"
                                         VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <Border
+                                        Grid.Column="1"
+                                        Width="40"
+                                        Height="40"
+                                        CornerRadius="4"
+                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                        <Image
+                                            Width="40"
+                                            Height="40"
+                                            Source="{x:Bind Song.Album.CoverUrl, Converter={StaticResource UriImageSourceConverter}, Mode=OneWay}"
+                                            Stretch="UniformToFill" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                                         <TextBlock
                                             Text="{x:Bind Song.Name}"
                                             FontSize="14"
@@ -370,7 +320,7 @@
                                             TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
                                     <TextBlock
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         Text="{x:Bind Song.DurationText}"
                                         FontSize="12"
                                         Opacity="0.4"

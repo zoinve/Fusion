@@ -513,7 +513,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         _dispatcher.TryEnqueue(() =>
         {
             CurrentTrack = track;
-            Duration = _player.Duration;
+            Duration = ResolveDisplayDuration(track);
             OnPropertyChanged(nameof(LikeGlyph));
             OnPropertyChanged(nameof(LeftMetadataLines));
             OnPropertyChanged(nameof(CurrentTrackName));
@@ -521,6 +521,8 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(CurrentTrackCoverUrl));
             OnPropertyChanged(nameof(CurrentTrackAlbumName));
             OnPropertyChanged(nameof(CurrentTrackAlbumArtist));
+            OnPropertyChanged(nameof(DurationText));
+            OnPropertyChanged(nameof(ProgressValue));
             _ = LoadLyricsAsync();
             _ = LoadAudioQualityAsync();
         });
@@ -542,7 +544,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         _dispatcher.TryEnqueue(() =>
         {
             Position = position;
-            Duration = _player.Duration;
+            Duration = ResolveDisplayDuration(_currentTrack);
             OnPropertyChanged(nameof(PositionText));
             OnPropertyChanged(nameof(DurationText));
             OnPropertyChanged(nameof(ProgressValue));
@@ -566,7 +568,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         CurrentTrack = _player.CurrentTrack;
         State = _player.State;
         Position = _player.Position;
-        Duration = _player.Duration;
+        Duration = ResolveDisplayDuration(_player.CurrentTrack);
         _volume = _player.Volume;
         Mode = _player.Mode;
         _isMuted = _player.IsMuted;
@@ -589,6 +591,18 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CurrentTrackAlbumArtist));
         _ = LoadLyricsAsync();
         _ = LoadAudioQualityAsync();
+    }
+
+    private TimeSpan ResolveDisplayDuration(TrackInfo? track)
+    {
+        if (_player.Duration > TimeSpan.Zero)
+        {
+            return _player.Duration;
+        }
+
+        return track is not null && track.Duration > 0
+            ? TimeSpan.FromMilliseconds(track.Duration)
+            : TimeSpan.Zero;
     }
 
     private void OnLikedStateChanged(object? sender, long trackId)

@@ -43,11 +43,6 @@ public sealed partial class LibraryPage : Page
         {
             await ViewModel.LoadAsync();
         }
-        else
-        {
-            // Always refresh liked songs (count, latest cover) from API on re-entry
-            await ViewModel.RefreshLikedSongsAsync();
-        }
 
         if (e.NavigationMode == Microsoft.UI.Xaml.Navigation.NavigationMode.Back)
         {
@@ -112,14 +107,6 @@ public sealed partial class LibraryPage : Page
         WeekTabButton.Opacity = _historyTabIndex == 0 ? 1.0 : 0.45;
         AllTabButton.Opacity = _historyTabIndex == 1 ? 1.0 : 0.45;
         HistoryList.ItemsSource = _historyTabIndex == 0 ? ViewModel.HistoryWeek : ViewModel.HistoryAll;
-    }
-
-    private void OnLikedSongsClick(object sender, RoutedEventArgs e)
-    {
-        if (!string.IsNullOrEmpty(ViewModel.LikedSongsPlaylistId))
-        {
-            App.NavigationService?.Navigate(Core.Services.PageRoute.PlaylistDetail, long.Parse(ViewModel.LikedSongsPlaylistId));
-        }
     }
 
     private void OnPlaylistTapped(object sender, TappedRoutedEventArgs e)

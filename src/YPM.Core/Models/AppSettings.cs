@@ -43,6 +43,9 @@ public sealed class AppSettings
     public long CacheLimit { get; set; } = 2048;
     public string CacheLocation { get; set; } = string.Empty;
 
+    // ── Navigation ──
+    public string StartPage { get; set; } = "home";
+
     // ── Display ──
     public bool ShowPlaylistsByAppleMusic { get; set; } = true;
     public bool SubTitleDefault { get; set; }

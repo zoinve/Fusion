@@ -13,7 +13,7 @@
 
         <Style x:Key="SectionContainerStyle" TargetType="StackPanel">
             <Setter Property="MaxWidth" Value="1260" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="Spacing" Value="18" />
         </Style>
 
@@ -26,7 +26,7 @@
 
     <ScrollViewer x:Name="MainScrollViewer">
         <StackPanel Padding="28,24,28,40" Spacing="40">
-            <Grid MaxWidth="1260" HorizontalAlignment="Center" ColumnSpacing="20">
+            <Grid MaxWidth="1260" HorizontalAlignment="Left" ColumnSpacing="20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -109,10 +109,10 @@
                                 </Border>
                                 <TextBlock
                                     Text="{x:Bind Name}"
-                                    HorizontalAlignment="Center"
+                                    HorizontalAlignment="Left"
                                     FontSize="15"
                                     FontWeight="SemiBold"
-                                    TextAlignment="Center"
+                                    TextAlignment="Left"
                                     TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </DataTemplate>

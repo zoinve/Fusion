@@ -11,6 +11,7 @@ namespace YPM.UI.Services;
 
 public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
 {
+    private const int PlayStateSubmitIntervalSeconds = 15;
     private readonly INeteaseApiClient _apiClient;
     private MediaPlayer? _player;
 
@@ -25,6 +26,9 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     private TrackInfo? _current;
     private PlayerState _state = PlayerState.Idle;
     private bool _initialized;
+    private string? _currentSessionId;
+    private long _currentSessionTrackId;
+    private long _lastSubmittedProgressSeconds = -1;
 
     public AudioPlayerService(INeteaseApiClient apiClient)
     {
@@ -146,12 +150,14 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     public async Task PlayAsync(TrackInfo track, CancellationToken cancellationToken = default)
     {
         EnsureInitialized();
+        await FinalizePlaybackReportingAsync(cancellationToken: cancellationToken);
         SetState(PlayerState.Loading);
 
         var index = _queue.FindIndex(t => t.Id == track.Id);
         if (index >= 0) _queueIndex = index;
 
         _current = track;
+        StartPlaybackSession(track);
         TrackChanged?.Invoke(this, _current);
 
         var playbackUri = await ResolvePlaybackUriAsync(track, cancellationToken);
@@ -172,6 +178,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         _player!.Source = item;
         _player.Play();
         _timer!.Start();
+        _ = SubmitPlayStateSafeAsync(track.Id, 0, cancellationToken);
     }
 
     private async Task<Uri?> ResolvePlaybackUriAsync(TrackInfo track, CancellationToken cancellationToken)
@@ -257,10 +264,12 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     public async Task StopAsync()
     {
         EnsureInitialized();
+        await FinalizePlaybackReportingAsync();
         _player!.Pause();
         _player.Source = null;
         _timer!.Stop();
         SetState(PlayerState.Stopped);
+        ResetPlaybackSession();
         await Task.CompletedTask;
     }
 
@@ -285,6 +294,8 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     {
         EnsureInitialized();
         _player!.PlaybackSession.Position = position;
+        PositionChanged?.Invoke(this, position);
+        _ = SubmitPlayStateSafeAsync(_current?.Id ?? 0, ToWholeSeconds(position));
         await Task.CompletedTask;
     }
 
@@ -350,6 +361,8 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         _ = dispatcherQueue.EnqueueAsync(async () =>
         {
             _timer?.Stop();
+            await FinalizePlaybackReportingAsync(markCompleted: true);
+            ResetPlaybackSession();
             if (_mode == PlayMode.Single)
             {
                 await PlayAsync(_queueIndex);
@@ -388,7 +401,9 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     {
         if (_player is not null)
         {
-            PositionChanged?.Invoke(this, _player.PlaybackSession.Position);
+            var position = _player.PlaybackSession.Position;
+            PositionChanged?.Invoke(this, position);
+            _ = MaybeSubmitPlayStateAsync(position);
         }
     }
 
@@ -419,11 +434,141 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
 
             if (_player.PlaybackSession.NaturalDuration > TimeSpan.Zero)
             {
+                PositionChanged?.Invoke(this, position);
                 return;
             }
 
             await Task.Delay(150, cancellationToken);
         }
+
+        // Best-effort: fire position event even if NaturalDuration wasn't available
+        if (_player is not null)
+        {
+            PositionChanged?.Invoke(this, _player.PlaybackSession.Position);
+        }
+    }
+
+    private void StartPlaybackSession(TrackInfo track)
+    {
+        _currentSessionTrackId = track.Id;
+        _currentSessionId = CreateSessionId();
+        _lastSubmittedProgressSeconds = -1;
+    }
+
+    private void ResetPlaybackSession()
+    {
+        _currentSessionId = null;
+        _currentSessionTrackId = 0;
+        _lastSubmittedProgressSeconds = -1;
+    }
+
+    private async Task MaybeSubmitPlayStateAsync(TimeSpan position)
+    {
+        if (_current is null || _currentSessionTrackId != _current.Id)
+        {
+            return;
+        }
+
+        var progress = ToWholeSeconds(position);
+        if (progress <= 0 || progress == _lastSubmittedProgressSeconds || progress % PlayStateSubmitIntervalSeconds != 0)
+        {
+            return;
+        }
+
+        await SubmitPlayStateSafeAsync(_current.Id, progress);
+    }
+
+    private async Task SubmitPlayStateSafeAsync(long trackId, long progressSeconds, CancellationToken cancellationToken = default)
+    {
+        if (trackId <= 0 || string.IsNullOrWhiteSpace(_currentSessionId))
+        {
+            return;
+        }
+
+        try
+        {
+            await _apiClient.SubmitPlayStateAsync(
+                trackId,
+                _currentSessionId,
+                progressSeconds,
+                ToApiPlayMode(_mode),
+                "song",
+                cancellationToken);
+            _lastSubmittedProgressSeconds = progressSeconds;
+        }
+        catch
+        {
+            // Playback reporting is best-effort.
+        }
+    }
+
+    private async Task FinalizePlaybackReportingAsync(bool markCompleted = false, CancellationToken cancellationToken = default)
+    {
+        var track = _current;
+        if (track is null || track.Id <= 0 || _currentSessionTrackId != track.Id)
+        {
+            return;
+        }
+
+        var progress = markCompleted
+            ? ToWholeSeconds(TimeSpan.FromMilliseconds(Math.Max(0, track.Duration)))
+            : ToWholeSeconds(Position);
+
+        if (progress > 0)
+        {
+            await SubmitPlayStateSafeAsync(track.Id, progress, cancellationToken);
+            await ScrobbleSafeAsync(track, progress, cancellationToken);
+        }
+    }
+
+    private async Task ScrobbleSafeAsync(TrackInfo track, long progressSeconds, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _apiClient.ScrobbleV1Async(
+                track.Id,
+                progressSeconds,
+                source: "list",
+                name: track.Name,
+                artist: track.ArtistsText,
+                bitrate: ResolveScrobbleBitrate(track),
+                level: MusicQualityToLevel(ResolveScrobbleBitrate(track)),
+                total: ToWholeSeconds(TimeSpan.FromMilliseconds(Math.Max(0, track.Duration))),
+                cancellationToken: cancellationToken);
+        }
+        catch
+        {
+            // Playback reporting is best-effort.
+        }
+    }
+
+    private static long ResolveScrobbleBitrate(TrackInfo track)
+    {
+        return track.Br > 0 ? track.Br : App.Settings.MusicQuality;
+    }
+
+    private static long ToWholeSeconds(TimeSpan timeSpan)
+    {
+        return Math.Max(0, (long)Math.Floor(timeSpan.TotalSeconds));
+    }
+
+    private static string ToApiPlayMode(PlayMode mode) => mode switch
+    {
+        PlayMode.Single => "single_loop",
+        PlayMode.Shuffle => "shuffle",
+        _ => "list_loop",
+    };
+
+    private static string CreateSessionId()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Span<char> buffer = stackalloc char[12];
+        for (var i = 0; i < buffer.Length; i++)
+        {
+            buffer[i] = chars[Random.Shared.Next(chars.Length)];
+        }
+
+        return new string(buffer);
     }
 
     public void Dispose()

@@ -23,6 +23,7 @@ public partial class App : Application
     public static IAudioPlayerService? AudioPlayer { get; set; }
     public static ILocalCacheService? CacheService { get; private set; }
     public static IMusicCacheService? MusicCacheService { get; private set; }
+    public static IImageCacheService? ImageCacheService { get; private set; }
     public static ILikedSongsService? LikedSongsService { get; set; }
     public static INavigationService? NavigationService { get; set; }
     public static ILocalizationService? LocalizationService { get; private set; }
@@ -47,6 +48,7 @@ public partial class App : Application
 
             await InitializeCacheServiceAsync();
             await InitializeMusicCacheServiceAsync();
+            await InitializeImageCacheServiceAsync();
             await RestoreAuthStateFromCacheAsync();
 
             BackendHostService = new NodeBackendHostService(Settings.Api);
@@ -102,6 +104,18 @@ public partial class App : Application
         var cacheLimitMb = Settings.CacheLimit > 0 ? Settings.CacheLimit : 2048;
         MusicCacheService = new FileBasedMusicCacheService(cacheDir, cacheLimitMb * 1024 * 1024, () => Settings.SessionCookie);
         await MusicCacheService.InitializeAsync();
+    }
+
+    private static async Task InitializeImageCacheServiceAsync()
+    {
+        string? cacheDir = null;
+        if (!string.IsNullOrWhiteSpace(Settings.CacheLocation) && Path.IsPathRooted(Settings.CacheLocation))
+        {
+            cacheDir = Path.Combine(Settings.CacheLocation, "image_cache");
+        }
+
+        ImageCacheService = new FileBasedImageCacheService(cacheDir);
+        await ImageCacheService.InitializeAsync();
     }
 
     private static async Task InitializeLikedSongsServiceAsync()
@@ -218,6 +232,18 @@ public partial class App : Application
         var cacheLimitMb = Settings.CacheLimit > 0 ? Settings.CacheLimit : 2048;
         MusicCacheService = new FileBasedMusicCacheService(cacheDir, cacheLimitMb * 1024 * 1024, () => Settings.SessionCookie);
         _ = MusicCacheService.InitializeAsync();
+    }
+
+    public static void ReinitializeImageCacheService()
+    {
+        string? cacheDir = null;
+        if (!string.IsNullOrWhiteSpace(Settings.CacheLocation) && Path.IsPathRooted(Settings.CacheLocation))
+        {
+            cacheDir = Path.Combine(Settings.CacheLocation, "image_cache");
+        }
+
+        ImageCacheService = new FileBasedImageCacheService(cacheDir);
+        _ = ImageCacheService.InitializeAsync();
     }
 
     public static async Task SaveAuthStateToCacheAsync()

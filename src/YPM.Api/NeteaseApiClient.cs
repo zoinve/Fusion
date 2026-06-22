@@ -62,8 +62,7 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             return;
         }
 
-        // Handle both standard cookie separators ("; ") and the custom one used by YesPlayMusic (";;").
-        var parts = cookie.Split(new[] { ";;", ";" }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = SplitCookieParts(cookie);
 
         foreach (var part in parts)
         {
@@ -80,6 +79,46 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             }
             ExtractMusicU(trimmed);
         }
+    }
+
+    private static IEnumerable<string> SplitCookieParts(string cookie)
+    {
+        var normalized = cookie.Replace(" HTTPOnly", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(";HTTPOnly", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("; HttpOnly", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        if (normalized.Contains(";;", StringComparison.Ordinal))
+        {
+            return normalized.Split([";;"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(ExtractCookieKeyValue)
+                .Where(static part => !string.IsNullOrWhiteSpace(part));
+        }
+
+        return normalized.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(static part => part.Trim())
+            .Where(static part => part.Contains('='))
+            .Where(static part => !IsCookieAttribute(part))
+            .Select(ExtractCookieKeyValue)
+            .Where(static part => !string.IsNullOrWhiteSpace(part));
+    }
+
+    private static string ExtractCookieKeyValue(string part)
+    {
+        var firstSegment = part.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        return firstSegment ?? string.Empty;
+    }
+
+    private static bool IsCookieAttribute(string part)
+    {
+        var eq = part.IndexOf('=');
+        var key = eq > 0 ? part[..eq].Trim() : part.Trim();
+        return key.Equals("path", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("domain", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("expires", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("max-age", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("samesite", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("secure", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("httponly", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ExtractMusicU(string cookiePart)
@@ -499,20 +538,20 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
     //  Playlist
     // ═══════════════════════════════════════════════════════════
 
-    public async Task<PlaylistDetail?> GetPlaylistDetailAsync(long id, int? s = null, CancellationToken cancellationToken = default)
+    public async Task<PlaylistDetail?> GetPlaylistDetailAsync(long id, int? s = null, bool skipCache = false, CancellationToken cancellationToken = default)
     {
         var query = new Dictionary<string, string?> { ["id"] = id.ToString() };
         if (s.HasValue) query["s"] = s.Value.ToString();
-        var root = await GetJsonAsync("playlist/detail", query, cancellationToken);
+        var root = await GetJsonAsync("playlist/detail", query, cancellationToken, skipCache);
         return MapPlaylistDetail(root["playlist"]);
     }
 
-    public async Task<List<TrackInfo>> GetPlaylistAllTracksAsync(long id, int limit = 0, int offset = 0, CancellationToken cancellationToken = default)
+    public async Task<List<TrackInfo>> GetPlaylistAllTracksAsync(long id, int limit = 0, int offset = 0, bool skipCache = false, CancellationToken cancellationToken = default)
     {
         var query = new Dictionary<string, string?> { ["id"] = id.ToString() };
         if (limit > 0) query["limit"] = limit.ToString();
         if (offset > 0) query["offset"] = offset.ToString();
-        var root = await GetJsonAsync("playlist/track/all", query, cancellationToken);
+        var root = await GetJsonAsync("playlist/track/all", query, cancellationToken, skipCache);
         return root["songs"]?.AsArray().Select(MapTrackFromNode).Where(t => t is not null).Cast<TrackInfo>().ToList() ?? [];
     }
 
@@ -1353,12 +1392,55 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             .Where(x => x is not null).Cast<PersonalFmTrack>().ToList() ?? [];
     }
 
-    public async Task<ApiResponse<object>> ScrobbleFmAsync(long id, long? sourceId = null, long? time = null, CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<object>> ScrobbleV1Async(
+        long id,
+        long time,
+        long? sourceId = null,
+        string? source = null,
+        string? name = null,
+        string? artist = null,
+        long? bitrate = null,
+        string? level = null,
+        long? total = null,
+        CancellationToken cancellationToken = default)
     {
-        var body = new Dictionary<string, string?> { ["id"] = id.ToString(), ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() };
-        if (sourceId.HasValue) body["sourceId"] = sourceId.Value.ToString();
-        if (time.HasValue) body["time"] = time.Value.ToString();
-        var root = await PostFormAsync("scrobble", body, null, cancellationToken);
+        var query = new Dictionary<string, string?>
+        {
+            ["id"] = id.ToString(),
+            ["time"] = time.ToString(),
+        };
+
+        if (sourceId.HasValue) query["sourceid"] = sourceId.Value.ToString();
+        if (!string.IsNullOrWhiteSpace(source)) query["source"] = source;
+        if (!string.IsNullOrWhiteSpace(name)) query["name"] = name;
+        if (!string.IsNullOrWhiteSpace(artist)) query["artist"] = artist;
+        if (bitrate.HasValue) query["bitrate"] = bitrate.Value.ToString();
+        if (!string.IsNullOrWhiteSpace(level)) query["level"] = level;
+        if (total.HasValue) query["total"] = total.Value.ToString();
+
+        var root = await GetJsonAsync("scrobble/v1", query, cancellationToken);
+        return ParseApiResponse(root);
+    }
+
+    public async Task<ApiResponse<object>> SubmitPlayStateAsync(
+        long id,
+        string? sessionId = null,
+        long? progress = null,
+        string? playMode = null,
+        string? type = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new Dictionary<string, string?>
+        {
+            ["id"] = id.ToString(),
+        };
+
+        if (!string.IsNullOrWhiteSpace(sessionId)) query["sessionId"] = sessionId;
+        if (progress.HasValue) query["progress"] = progress.Value.ToString();
+        if (!string.IsNullOrWhiteSpace(playMode)) query["playMode"] = playMode;
+        if (!string.IsNullOrWhiteSpace(type)) query["type"] = type;
+
+        var root = await GetJsonAsync("relay/play/state/submit", query, cancellationToken);
         return ParseApiResponse(root);
     }
 
@@ -1533,16 +1615,16 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
     //  HTTP Helpers
     // ═══════════════════════════════════════════════════════════
 
-    private async Task<JsonNode> GetJsonAsync(string relativePath, IDictionary<string, string?>? query, CancellationToken cancellationToken)
+    private async Task<JsonNode> GetJsonAsync(string relativePath, IDictionary<string, string?>? query, CancellationToken cancellationToken, bool skipCache = false)
     {
-        return await SendAsync(HttpMethod.Get, relativePath, query, null, cancellationToken);
+        return await SendAsync(HttpMethod.Get, relativePath, query, null, skipCache, cancellationToken);
     }
 
     private async Task<JsonNode> PostJsonAsync(string relativePath, IDictionary<string, string?>? query, object body, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(body, _jsonOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-        return await SendAsync(HttpMethod.Post, relativePath, query, content, cancellationToken);
+        return await SendAsync(HttpMethod.Post, relativePath, query, content, cancellationToken: cancellationToken);
     }
 
     private async Task<JsonNode> PostFormAsync(string relativePath, IDictionary<string, string?>? formData, IDictionary<string, string?>? query, CancellationToken cancellationToken)
@@ -1552,21 +1634,21 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             .Where(p => p.Value is not null)
             .Select(p => new KeyValuePair<string, string>(p.Key, p.Value!)));
 
-        return await SendAsync(HttpMethod.Post, relativePath, query, content, cancellationToken);
+        return await SendAsync(HttpMethod.Post, relativePath, query, content, cancellationToken: cancellationToken);
     }
 
     private async Task<JsonNode> PostMultipartAsync(string relativePath, IDictionary<string, string?>? query, MultipartFormDataContent content, CancellationToken cancellationToken)
     {
-        return await SendAsync(HttpMethod.Post, relativePath, query, content, cancellationToken);
+        return await SendAsync(HttpMethod.Post, relativePath, query, content, cancellationToken: cancellationToken);
     }
 
-    private async Task<JsonNode> SendAsync(HttpMethod method, string relativePath, IDictionary<string, string?>? query, HttpContent? content, CancellationToken cancellationToken)
+    private async Task<JsonNode> SendAsync(HttpMethod method, string relativePath, IDictionary<string, string?>? query, HttpContent? content, bool skipCache = false, CancellationToken cancellationToken = default)
     {
         var canCache = method == HttpMethod.Get
             && _cacheService is not null
             && IsCacheableRequest(relativePath, query);
 
-        if (canCache)
+        if (canCache && !skipCache)
         {
             var cacheKey = BuildCacheKey(relativePath, query);
             var cachedJson = await _cacheService!.GetAsync<CachedApiResponse>(cacheKey);
@@ -1705,6 +1787,7 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             or "toplist/artist"
             or "playlist/detail"
             or "playlist/detail/dynamic"
+            or "playlist/track/all"
             or "playlist/catlist"
             or "playlist/hot"
             or "top/playlist"
@@ -1717,14 +1800,11 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             or "user/account"
             or "user/subcount"
             or "user/level"
-            or "user/playlist"
-            or "user/record"
             or "user/event"
             or "user/follows"
             or "user/followeds"
             or "user/dj"
             or "user/comment/history"
-            or "likelist"
             or "recommend/songs"
             or "recommend/resource"
             or "personal_fm"
@@ -1740,6 +1820,7 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
 
         await _cacheService.RemoveAsync(BuildCacheKey("playlist/detail", new Dictionary<string, string?> { ["id"] = id.ToString() }));
         await _cacheService.RemoveAsync(BuildCacheKey("playlist/detail/dynamic", new Dictionary<string, string?> { ["id"] = id.ToString() }));
+        await _cacheService.RemoveAsync(BuildCacheKey("playlist/track/all", new Dictionary<string, string?> { ["id"] = id.ToString() }));
     }
 
     private async Task InvalidateAlbumCacheAsync(long id)

@@ -93,8 +93,7 @@
 
         <ScrollViewer Grid.Row="1" x:Name="MainScrollViewer">
             <StackPanel 
-                MaxWidth="1100" 
-                HorizontalAlignment="Center" 
+                HorizontalAlignment="Stretch" 
                 Padding="40,24,40,40" 
                 Spacing="28">
 

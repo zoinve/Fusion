@@ -468,6 +468,7 @@ public sealed class LoginViewModel : ObservableObject
 
     private void StartPolling(string key)
     {
+        StopPolling();
         _timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
         _ = PollAsync(key);
     }
@@ -500,7 +501,7 @@ public sealed class LoginViewModel : ObservableObject
                     {
                         if (!string.IsNullOrWhiteSpace(result.Cookie))
                         {
-                            App.ApiClient.SetSessionCookie(result.Cookie);
+                            App.ApiClient.SetSessionCookie(result.Cookie.Replace(" HTTPOnly", string.Empty, StringComparison.OrdinalIgnoreCase));
                         }
                         App.Settings.SessionCookie = App.ApiClient.ExportSessionCookie();
                         CurrentUser = await LoadCurrentUserAfterLoginAsync();

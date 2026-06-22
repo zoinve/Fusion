@@ -51,8 +51,22 @@ public sealed partial class MainWindow : Window
         Closed += Window_Closed;
         ((FrameworkElement)Content).ActualThemeChanged += Window_ThemeChanged;
         ConfigureTitleBar();
-        RootNavigationView.SelectedItem = RootNavigationView.MenuItems[0];
-        RootFrame.Navigate(typeof(HomePage));
+        // Navigate to configured start page
+        var startTag = App.Settings.StartPage ?? "home";
+        var startPageType = PageTypeForTag(startTag) ?? typeof(HomePage);
+
+        // Select the corresponding NavigationView item
+        NavigationViewItem? selectedItem = null;
+        foreach (var item in RootNavigationView.MenuItems)
+        {
+            if (item is NavigationViewItem nvi && nvi.Tag?.ToString() == startTag)
+            {
+                selectedItem = nvi;
+                break;
+            }
+        }
+        RootNavigationView.SelectedItem = selectedItem ?? RootNavigationView.MenuItems[0];
+        RootFrame.Navigate(startPageType);
 
         // Wire up PlayerBar click to show/hide NowPlayingPage.
         PlayerBarControl.BarTapped += OnPlayerBarTapped;
@@ -134,8 +148,11 @@ public sealed partial class MainWindow : Window
             _configurationSource.IsInputActive = args.WindowActivationState != WindowActivationState.Deactivated;
     }
 
-    private void Window_Closed(object sender, WindowEventArgs args)
+    private async void Window_Closed(object sender, WindowEventArgs args)
     {
+        // Persist playback state before disposing services
+        await App.PersistPlaybackStateAsync(force: true);
+
         _hotkeyService?.Dispose();
         _hotkeyService = null;
 
