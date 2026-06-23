@@ -2,7 +2,9 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using YPM.Core.Models;
 using YPM.Core.Mvvm;
+using YPM.Core.Services;
 using YPM.UI.Extensions;
+using YPM.UI.Services;
 
 namespace YPM.UI.ViewModels;
 
@@ -587,11 +589,28 @@ public sealed class LoginViewModel : ObservableObject
         App.Settings.CurrentUser = null;
         App.Settings.SessionCookie = string.Empty;
         App.Settings.LastCookieRefreshDay = 0;
+
+        // Stop playback and clear the audio queue.
+        if (App.AudioPlayer is not null)
+        {
+            await App.AudioPlayer.StopAsync();
+            App.AudioPlayer.ClearQueue();
+        }
+
+        // Clear persisted playback state so the next login doesn't resume an old session.
+        App.Settings.LastPlayback = null;
+
         if (App.LikedSongsService is IDisposable disposable)
         {
             disposable.Dispose();
         }
         App.LikedSongsService = null;
+
+        // Remove cached liked track IDs so they aren't visible to the next user.
+        if (App.CacheService is not null)
+        {
+            await App.CacheService.RemoveAsync(LikedSongsService.LikedIdsCacheKey);
+        }
 
         // Overwrite cache with empty data first so that even if the subsequent
         // removal fails, RestoreAuthStateFromCacheAsync won't resurrect the old session.
@@ -599,6 +618,9 @@ public sealed class LoginViewModel : ObservableObject
         await App.SettingsService.SaveAsync(App.Settings);
         await App.ClearAuthStateCacheAsync();
         App.RecreateApiClient();
+
+        // Navigate to Home page and clear back stack so stale user data is unreachable.
+        App.NavigationService?.Navigate(PageRoute.Home, clearBackStack: true);
 
         CurrentUser = null;
         QrImageBase64 = string.Empty;

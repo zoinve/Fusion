@@ -20,6 +20,10 @@ public class TrackInfo
 
     public long Br { get; set; }
 
+    public string? ActualQualityLevel { get; set; }
+
+    public long ActualSr { get; set; }
+
     public int DiscNumber { get; set; }
 
     public int TrackNumber { get; set; }
@@ -62,6 +66,10 @@ public sealed class TrackUrlInfo
     public bool CanExtend { get; set; }
 
     public string? Md5 { get; set; }
+
+    public string? Level { get; set; }
+
+    public long Sr { get; set; }
 }
 
 public sealed class TrackDetailResult

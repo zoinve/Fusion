@@ -33,6 +33,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         _player.StateChanged += OnStateChanged;
         _player.PositionChanged += OnPositionChanged;
         _player.VolumeChanged += OnVolumeChanged;
+        _player.ModeChanged += OnModeChanged;
 
         if (_likedService is not null)
         {
@@ -349,9 +350,12 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
 
         try
         {
+            var targetLevel = _currentTrack.ActualQualityLevel ?? MusicQualityToLevel(App.Settings.MusicQuality);
             var detail = await App.ApiClient.GetSongMusicDetailAsync(_currentTrack.Id);
-            var quality = detail?.GetQuality(MusicQualityToLevel(App.Settings.MusicQuality));
-            var summary = FormatAudioQualitySummary(quality, _currentTrack.Br);
+            var quality = detail?.GetQuality(targetLevel);
+            var bitrate = quality?.Bitrate ?? _currentTrack.Br;
+            var sampleRate = quality?.SampleRate ?? _currentTrack.ActualSr;
+            var summary = FormatAudioQualitySummary(bitrate, sampleRate);
 
             _dispatcher.TryEnqueue(() =>
             {
@@ -363,7 +367,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         {
             _dispatcher.TryEnqueue(() =>
             {
-                AudioQualitySummary = FormatAudioQualitySummary(null, _currentTrack.Br);
+                AudioQualitySummary = FormatAudioQualitySummary(_currentTrack.Br, _currentTrack.ActualSr);
                 OnPropertyChanged(nameof(LeftMetadataLines));
             });
         }
@@ -477,10 +481,8 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         }
     }
 
-    private static string FormatAudioQualitySummary(TrackAudioQualityInfo? quality, long fallbackBitrate)
+    private static string FormatAudioQualitySummary(long bitrate, long sampleRate)
     {
-        var bitrate = quality?.Bitrate ?? fallbackBitrate;
-        var sampleRate = quality?.SampleRate ?? 0;
         if (bitrate <= 0 && sampleRate <= 0)
         {
             return string.Empty;
@@ -549,6 +551,16 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(DurationText));
             OnPropertyChanged(nameof(ProgressValue));
             UpdateLyricIndex();
+        });
+    }
+
+    private void OnModeChanged(object? sender, PlayMode mode)
+    {
+        _dispatcher.TryEnqueue(() =>
+        {
+            _mode = mode;
+            OnPropertyChanged(nameof(Mode));
+            OnPropertyChanged(nameof(ModeGlyph));
         });
     }
 
@@ -638,5 +650,6 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         _player.StateChanged -= OnStateChanged;
         _player.PositionChanged -= OnPositionChanged;
         _player.VolumeChanged -= OnVolumeChanged;
+        _player.ModeChanged -= OnModeChanged;
     }
 }

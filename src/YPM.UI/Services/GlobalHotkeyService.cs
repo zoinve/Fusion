@@ -7,8 +7,8 @@ namespace YPM.UI.Services;
 
 public sealed class GlobalHotkeyService : IDisposable
 {
-    private const uint MOD_ALT = 0x0001;
     private const uint MOD_CONTROL = 0x0002;
+    private const uint MOD_SHIFT = 0x0004;
     private const uint WM_HOTKEY = 0x0312;
 
     private readonly IntPtr _hwnd;
@@ -38,11 +38,11 @@ public sealed class GlobalHotkeyService : IDisposable
         if (_registered) return;
         _registered = true;
 
-        RegisterHotKey(_hwnd, 1, MOD_CONTROL | MOD_ALT, 0x50); // P
-        RegisterHotKey(_hwnd, 2, MOD_CONTROL | MOD_ALT, 0x25); // Left
-        RegisterHotKey(_hwnd, 3, MOD_CONTROL | MOD_ALT, 0x27); // Right
-        RegisterHotKey(_hwnd, 4, MOD_CONTROL | MOD_ALT, 0x26); // Up
-        RegisterHotKey(_hwnd, 5, MOD_CONTROL | MOD_ALT, 0x28); // Down
+        RegisterHotKey(_hwnd, 1, MOD_CONTROL | MOD_SHIFT, 0x50); // P
+        RegisterHotKey(_hwnd, 2, MOD_CONTROL | MOD_SHIFT, 0x25); // Left
+        RegisterHotKey(_hwnd, 3, MOD_CONTROL | MOD_SHIFT, 0x27); // Right
+        RegisterHotKey(_hwnd, 4, MOD_CONTROL | MOD_SHIFT, 0x26); // Up
+        RegisterHotKey(_hwnd, 5, MOD_CONTROL | MOD_SHIFT, 0x28); // Down
     }
 
     public void UnregisterAll()

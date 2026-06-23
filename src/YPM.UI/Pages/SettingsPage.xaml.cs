@@ -24,6 +24,7 @@ public sealed partial class SettingsPage : Page
     public string StorageGlyph => IconGlyph.Storage;
     public string FolderGlyph => IconGlyph.Folder;
     public string SizeGlyph => IconGlyph.Edit;
+    public string RefreshGlyph => IconGlyph.Refresh;
 
     public SettingsPage()
     {
@@ -71,6 +72,24 @@ public sealed partial class SettingsPage : Page
         if (folder is not null)
         {
             await ViewModel.UpdateCacheLocationAsync(folder.Path);
+        }
+    }
+
+    private async void OnClearApiCacheClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "清除接口缓存",
+            Content = "确定要清除所有接口缓存数据吗？音乐文件和登录状态不会受到影响。",
+            PrimaryButtonText = "确定",
+            CloseButtonText = "取消",
+            XamlRoot = XamlRoot,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            await ViewModel.ClearApiCacheAsync();
         }
     }
 

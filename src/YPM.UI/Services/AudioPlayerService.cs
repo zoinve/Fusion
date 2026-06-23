@@ -40,6 +40,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     public event EventHandler<TimeSpan>? PositionChanged;
     public event EventHandler<double>? VolumeChanged;
     public event EventHandler? QueueChanged;
+    public event EventHandler<PlayMode>? ModeChanged;
 
     public PlayerState State => _state;
 
@@ -63,7 +64,12 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     public PlayMode Mode
     {
         get => _mode;
-        set => _mode = value;
+        set
+        {
+            if (_mode == value) return;
+            _mode = value;
+            ModeChanged?.Invoke(this, _mode);
+        }
     }
 
     public bool IsMuted
@@ -223,7 +229,24 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         {
             var level = MusicQualityToLevel(App.Settings.MusicQuality);
             var urls = await _apiClient.GetSongUrlsV1Async(track.Id.ToString(), level);
-            return urls.FirstOrDefault(u => u.Code == 200 && !string.IsNullOrWhiteSpace(u.Url))?.Url;
+            var matched = urls.FirstOrDefault(u => u.Code == 200 && !string.IsNullOrWhiteSpace(u.Url));
+            if (matched is not null)
+            {
+                if (matched.Br > 0)
+                {
+                    track.Br = matched.Br;
+                }
+                if (!string.IsNullOrWhiteSpace(matched.Level))
+                {
+                    track.ActualQualityLevel = matched.Level;
+                }
+                if (matched.Sr > 0)
+                {
+                    track.ActualSr = matched.Sr;
+                }
+                return matched.Url;
+            }
+            return null;
         }
         catch
         {

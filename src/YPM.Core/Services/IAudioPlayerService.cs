@@ -25,6 +25,7 @@ public interface IAudioPlayerService
     event EventHandler<TimeSpan>? PositionChanged;
     event EventHandler<double>? VolumeChanged;
     event EventHandler? QueueChanged;
+    event EventHandler<PlayMode>? ModeChanged;
 
     PlayerState State { get; }
     TrackInfo? CurrentTrack { get; }

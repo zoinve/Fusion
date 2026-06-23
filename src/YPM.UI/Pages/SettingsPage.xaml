@@ -336,6 +336,26 @@
             </StackPanel>
 
             <StackPanel Spacing="12">
+                <TextBlock Text="接口缓存" FontSize="13" FontWeight="SemiBold" Opacity="0.5" />
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="20,16">
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="{x:Bind RefreshGlyph}" FontSize="20" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Text="清除后所有页面数据将重新从网络获取" FontSize="13" Opacity="0.6" />
+                            <Button
+                                Content="清除接口缓存"
+                                Click="OnClearApiCacheClick"
+                                HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Spacing="12">
                 <TextBlock Text="Real IP" FontSize="13" FontWeight="SemiBold" Opacity="0.5" />
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="12" Padding="20,16">
                     <StackPanel Spacing="12">

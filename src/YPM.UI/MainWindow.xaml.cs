@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using WinRT.Interop;
 using YPM.Core.Services;
 using YPM.UI.Pages;
@@ -42,6 +43,12 @@ public sealed partial class MainWindow : Window
         nav.RegisterRoute(PageRoute.PlaylistDetail, typeof(PlaylistPage));
         nav.RegisterRoute(PageRoute.SearchType, typeof(SearchTypePage));
         nav.RegisterRoute(PageRoute.Settings, typeof(SettingsPage));
+        // Wire up login-required guard so Library and Settings redirect
+        // unauthenticated users to Settings (where the login UI lives).
+        nav.SetLoginRequiredGuard(
+            () => App.Settings.CurrentUser is not null,
+            () => { nav.Navigate(PageRoute.Settings, clearBackStack: true); return Task.CompletedTask; });
+
         App.NavigationService = nav;
 
         Title = "Fusion";

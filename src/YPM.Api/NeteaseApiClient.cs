@@ -1834,6 +1834,14 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
         await _cacheService.RemoveAsync(BuildCacheKey("album/detail/dynamic", new Dictionary<string, string?> { ["id"] = id.ToString() }));
     }
 
+    public async Task ClearApiCacheAsync()
+    {
+        if (_cacheService is not null)
+        {
+            await _cacheService.ClearAllAsync();
+        }
+    }
+
     private static string BuildCacheKey(string relativePath, IDictionary<string, string?>? query)
     {
         var normalizedPath = relativePath.TrimStart('/');
@@ -2261,6 +2269,8 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             Payed = item["payed"]?.GetValue<int>() ?? 0,
             CanExtend = item["canExtend"]?.GetValue<bool>() ?? false,
             Md5 = item["md5"]?.GetValue<string>(),
+            Level = item["level"]?.GetValue<string>(),
+            Sr = item["sr"]?.GetValue<long>() ?? 0,
         };
     }
 

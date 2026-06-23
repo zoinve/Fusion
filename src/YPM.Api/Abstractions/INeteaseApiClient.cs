@@ -197,6 +197,9 @@ public interface INeteaseApiClient
     Task<ApiResponse<object>> LastfmScrobbleAsync(string artist, string track, long timestamp, string? album = null, CancellationToken cancellationToken = default);
     Task<ApiResponse<object>> LastfmNowPlayingAsync(string artist, string track, string? album = null, CancellationToken cancellationToken = default);
 
+    // ── Cache ───────────────────────────────────────────────────
+    Task ClearApiCacheAsync();
+
     // ── Countries ──────────────────────────────────────────────
     Task<IReadOnlyList<object>> GetCountriesCodeListAsync(CancellationToken cancellationToken = default);
 }

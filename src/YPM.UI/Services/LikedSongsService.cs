@@ -11,7 +11,7 @@ public sealed class LikedSongsService : ILikedSongsService, IDisposable
     private readonly ILocalCacheService _cacheService;
     private readonly DispatcherQueueTimer _refreshTimer;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
-    private const string LikedIdsCacheKey = "liked/track_ids";
+    internal const string LikedIdsCacheKey = "liked/track_ids";
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
 
     private bool _isLoaded;

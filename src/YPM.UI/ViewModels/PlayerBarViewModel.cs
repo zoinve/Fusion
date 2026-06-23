@@ -32,6 +32,7 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
         _player.PositionChanged += OnPositionChanged;
         _player.VolumeChanged += OnVolumeChanged;
         _player.QueueChanged += OnQueueChanged;
+        _player.ModeChanged += OnModeChanged;
 
         if (_likedService is not null)
         {
@@ -324,6 +325,17 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
         });
     }
 
+    private void OnModeChanged(object? sender, PlayMode mode)
+    {
+        _dispatcher.TryEnqueue(() =>
+        {
+            _mode = mode;
+            OnPropertyChanged(nameof(Mode));
+            OnPropertyChanged(nameof(ModeGlyph));
+            OnPropertyChanged(nameof(ModeTooltip));
+        });
+    }
+
     private void OnQueueChanged(object? sender, EventArgs e)
     {
         _dispatcher.TryEnqueue(() =>
@@ -416,5 +428,6 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
         _player.PositionChanged -= OnPositionChanged;
         _player.VolumeChanged -= OnVolumeChanged;
         _player.QueueChanged -= OnQueueChanged;
+        _player.ModeChanged -= OnModeChanged;
     }
 }

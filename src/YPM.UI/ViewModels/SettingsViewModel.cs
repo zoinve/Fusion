@@ -196,6 +196,32 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    // ── API Cache ──
+    private bool _isClearingApiCache;
+
+    public bool IsClearingApiCache
+    {
+        get => _isClearingApiCache;
+        set => SetProperty(ref _isClearingApiCache, value);
+    }
+
+    public async Task ClearApiCacheAsync()
+    {
+        IsClearingApiCache = true;
+        try
+        {
+            await App.ApiClient.ClearApiCacheAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"清除接口缓存失败: {ex.Message}";
+        }
+        finally
+        {
+            IsClearingApiCache = false;
+        }
+    }
+
     // ── Cache ──
     private bool _autoCacheSongs;
     public bool AutoCacheSongs
