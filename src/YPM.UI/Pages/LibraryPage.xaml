@@ -31,12 +31,6 @@
                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                     Severity="Error" />
 
-                <!-- Loading -->
-                <ProgressRing
-                    Width="40" Height="40"
-                    HorizontalAlignment="Center"
-                    IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
-
                 <!-- Login Prompt -->
                 <Border
                     x:Name="LoginPrompt"
@@ -256,7 +250,10 @@
                                     <ColumnDefinition Width="48" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock Text="{x:Bind Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{x:Bind Name}" />
+                                        <Run Text="{x:Bind DisplayAliasText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </TextBlock>
                                     <TextBlock Text="{x:Bind ArtistsText}" FontSize="12" Opacity="0.6" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Text="{x:Bind DurationText}" FontSize="12" Opacity="0.5" VerticalAlignment="Center" HorizontalAlignment="Right" />
@@ -309,10 +306,12 @@
                                     </Border>
                                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                                         <TextBlock
-                                            Text="{x:Bind Song.Name}"
                                             FontSize="14"
                                             FontWeight="SemiBold"
-                                            TextTrimming="CharacterEllipsis" />
+                                            TextTrimming="CharacterEllipsis">
+                                            <Run Text="{x:Bind Song.Name}" />
+                                            <Run Text="{x:Bind Song.DisplayAliasText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </TextBlock>
                                         <TextBlock
                                             Text="{x:Bind Song.ArtistsText}"
                                             FontSize="12"

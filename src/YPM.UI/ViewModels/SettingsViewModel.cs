@@ -101,6 +101,7 @@ public sealed class SettingsViewModel : ObservableObject
         new QualityOption(192000, "较高 (192 kbps)"),
         new QualityOption(320000, "极高 (320 kbps)"),
         new QualityOption(999000, "无损 (FLAC)"),
+        new QualityOption(1999000, "Hi-Res"),
     };
 
     private QualityOption _selectedQuality = null!;
@@ -330,6 +331,20 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     // ── Start Page ──
+    private bool _closeToBackground = true;
+    public bool CloseToBackground
+    {
+        get => _closeToBackground;
+        set
+        {
+            if (SetProperty(ref _closeToBackground, value))
+            {
+                App.Settings.CloseToBackground = value;
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
     public ObservableCollection<StartPageOption> StartPageOptions { get; } = new()
     {
         new StartPageOption("home", "首页"),
@@ -356,7 +371,7 @@ public sealed class SettingsViewModel : ObservableObject
     public bool IsLoggedIn => App.Settings.CurrentUser is not null;
 
     // ── App Version ──
-    public string AppVersion => "1.1.0 (WinUI 3)";
+    public string AppVersion => "1.1.2 (WinUI 3)";
 
     // ── Load / Save ──
     public void LoadFromSettings()
@@ -417,6 +432,9 @@ public sealed class SettingsViewModel : ObservableObject
 
         _enableAcrylic = s.EnableAcrylic;
         OnPropertyChanged(nameof(EnableAcrylic));
+
+        _closeToBackground = s.CloseToBackground;
+        OnPropertyChanged(nameof(CloseToBackground));
 
         // Start Page
         _selectedStartPage = StartPageOptions.FirstOrDefault(o => o.Value == s.StartPage) ?? StartPageOptions[0];

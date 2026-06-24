@@ -70,8 +70,10 @@
                         MaxLines="1"
                         FontSize="14"
                         FontWeight="SemiBold"
-                        Text="{x:Bind ViewModel.CurrentTrackName, Mode=OneWay}"
-                        TextTrimming="CharacterEllipsis" />
+                        TextTrimming="CharacterEllipsis">
+                        <Run Text="{x:Bind ViewModel.CurrentTrackName, Mode=OneWay}" />
+                        <Run Text="{x:Bind ViewModel.CurrentTrackAliasText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
                     <TextBlock
                         MaxWidth="240"
                         MaxLines="1"

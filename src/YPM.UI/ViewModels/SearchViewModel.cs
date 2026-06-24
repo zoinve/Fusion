@@ -9,6 +9,8 @@ public sealed class SearchItemInfo
 {
     public long Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string AliasText { get; set; } = string.Empty;
+    public string DisplayAliasText => string.IsNullOrWhiteSpace(AliasText) ? string.Empty : $"（{AliasText}）";
     public string CoverUrl { get; set; } = string.Empty;
     public string Subtitle { get; set; } = string.Empty;
     public SearchItemType Type { get; set; }
@@ -247,6 +249,7 @@ public sealed class SearchViewModel : ObservableObject
             {
                 Id = songId,
                 Name = SafeGetString(json, "name"),
+                Alias = GetAliases(json),
                 Duration = SafeGetLong(json, "dt"),
             };
 
@@ -358,6 +361,7 @@ public sealed class SearchViewModel : ObservableObject
                 {
                     Id = SafeGetLong(obj, "id"),
                     Name = SafeGetString(obj, "name"),
+                    AliasText = TryGetSongAlias(obj),
                     CoverUrl = NormalizeUrl(SafeGetNestedString(obj, "al", "picUrl")),
                     Subtitle = FormatSongSubtitle(obj),
                     Type = SearchItemType.Song,
@@ -447,6 +451,42 @@ public sealed class SearchViewModel : ObservableObject
             return string.Join(" / ", arr.Select(a => a?.GetValue<string>() ?? string.Empty).Where(s => s.Length > 0));
         }
         return string.Empty;
+    }
+
+    private static string TryGetSongAlias(JsonObject obj)
+    {
+        var aliases = GetAliases(obj);
+        return string.Join(" / ", aliases);
+    }
+
+    private static List<string> GetAliases(JsonObject obj)
+    {
+        static IEnumerable<string> Read(JsonNode? node)
+        {
+            return node is JsonArray arr
+                ? arr.Select(a => a?.GetValue<string>() ?? string.Empty).Where(static s => s.Length > 0)
+                : [];
+        }
+
+        if (obj.TryGetPropertyValue("alia", out var aliaNode))
+        {
+            var aliases = Read(aliaNode).ToList();
+            if (aliases.Count > 0) return aliases;
+        }
+
+        if (obj.TryGetPropertyValue("alias", out var aliasNode))
+        {
+            var aliases = Read(aliasNode).ToList();
+            if (aliases.Count > 0) return aliases;
+        }
+
+        if (obj.TryGetPropertyValue("tns", out var tnsNode))
+        {
+            var aliases = Read(tnsNode).ToList();
+            if (aliases.Count > 0) return aliases;
+        }
+
+        return [];
     }
 
     private static string FormatArtists(JsonArray? ar)

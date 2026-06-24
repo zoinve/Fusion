@@ -1,38 +1,38 @@
+using System.Runtime.InteropServices;
+using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using WinRT.Interop;
 using YPM.Core.Services;
 using YPM.UI.Pages;
 using YPM.UI.Services;
-using Microsoft.UI;
 
 namespace YPM.UI;
 
 public sealed partial class MainWindow : Window
 {
-    private WindowsSystemDispatcherQueueHelper? _wsdqHelper;
     private DesktopAcrylicController? _acrylicController;
     private SystemBackdropConfiguration? _configurationSource;
     private GlobalHotkeyService? _hotkeyService;
     private SMTCService? _smtcService;
+    private AppWindow? _appWindow;
+    private TrayIconService? _trayIconService;
+    private IntPtr _hwnd;
+    private bool _isExitRequested;
 
     public MainWindow()
     {
-        // Initialize audio player BEFORE InitializeComponent so PlayerBarControl can use it
         App.AudioPlayer ??= new AudioPlayerService(App.ApiClient);
 
-        // Initialize SMTC for system media controls integration
         _smtcService = new SMTCService(App.AudioPlayer);
         _smtcService.Initialize();
 
         InitializeComponent();
+        InitializeWindowing();
+        InitializeTrayIcon();
 
-        // Wire up navigation
         var nav = new FrameNavigationService();
         nav.Frame = RootFrame;
         nav.RegisterRoute(PageRoute.Home, typeof(HomePage));
@@ -43,8 +43,6 @@ public sealed partial class MainWindow : Window
         nav.RegisterRoute(PageRoute.PlaylistDetail, typeof(PlaylistPage));
         nav.RegisterRoute(PageRoute.SearchType, typeof(SearchTypePage));
         nav.RegisterRoute(PageRoute.Settings, typeof(SettingsPage));
-        // Wire up login-required guard so Library and Settings redirect
-        // unauthenticated users to Settings (where the login UI lives).
         nav.SetLoginRequiredGuard(
             () => App.Settings.CurrentUser is not null,
             () => { nav.Navigate(PageRoute.Settings, clearBackStack: true); return Task.CompletedTask; });
@@ -58,11 +56,10 @@ public sealed partial class MainWindow : Window
         Closed += Window_Closed;
         ((FrameworkElement)Content).ActualThemeChanged += Window_ThemeChanged;
         ConfigureTitleBar();
-        // Navigate to configured start page
+
         var startTag = App.Settings.StartPage ?? "home";
         var startPageType = PageTypeForTag(startTag) ?? typeof(HomePage);
 
-        // Select the corresponding NavigationView item
         NavigationViewItem? selectedItem = null;
         foreach (var item in RootNavigationView.MenuItems)
         {
@@ -72,19 +69,17 @@ public sealed partial class MainWindow : Window
                 break;
             }
         }
+
         RootNavigationView.SelectedItem = selectedItem ?? RootNavigationView.MenuItems[0];
         RootFrame.Navigate(startPageType);
 
-        // Wire up PlayerBar click to show/hide NowPlayingPage.
         PlayerBarControl.BarTapped += OnPlayerBarTapped;
 
-        // Apply acrylic if enabled in settings.
         if (App.Settings.EnableAcrylic)
         {
             ApplyAcrylic(true);
         }
 
-        // Global hotkeys
         _hotkeyService = new GlobalHotkeyService(this, DispatcherQueue);
         _hotkeyService.PlayPause += OnHotkeyPlayPause;
         _hotkeyService.NextTrack += OnHotkeyNext;
@@ -98,7 +93,7 @@ public sealed partial class MainWindow : Window
     {
         if (!enable)
         {
-            this.SystemBackdrop = null;
+            SystemBackdrop = null;
             RootGrid.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["ApplicationPageBackgroundThemeBrush"];
             TitleBarHost.Background = RootGrid.Background;
             return;
@@ -106,19 +101,45 @@ public sealed partial class MainWindow : Window
 
         if (DesktopAcrylicController.IsSupported())
         {
-            // Use the modern high-level SystemBackdrop property available in Windows App SDK 1.2+
-            this.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+            SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
             RootGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
             TitleBarHost.Background = RootGrid.Background;
         }
     }
 
+    public void ShowMainWindow()
+    {
+        if (_hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        ShowWindow(_hwnd, SW_RESTORE);
+        Activate();
+        SetForegroundWindow(_hwnd);
+    }
+
+    private void InitializeWindowing()
+    {
+        _hwnd = WindowNative.GetWindowHandle(this);
+        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(_hwnd);
+        _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow.Closing += OnAppWindowClosing;
+    }
+
+    private void InitializeTrayIcon()
+    {
+        _trayIconService = new TrayIconService(ShowMainWindow, ExitApplication, "Fusion");
+    }
+
     private void ConfigureTitleBar()
     {
-        var hwnd = WindowNative.GetWindowHandle(this);
-        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        var titleBar = appWindow.TitleBar;
+        if (_appWindow is null)
+        {
+            return;
+        }
+
+        var titleBar = _appWindow.TitleBar;
         titleBar.ExtendsContentIntoTitleBar = true;
         titleBar.BackgroundColor = Colors.Transparent;
         titleBar.InactiveBackgroundColor = Colors.Transparent;
@@ -129,10 +150,12 @@ public sealed partial class MainWindow : Window
 
     private void UpdateTitleBarButtonColors()
     {
-        var hwnd = WindowNative.GetWindowHandle(this);
-        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        var titleBar = appWindow.TitleBar;
+        if (_appWindow is null)
+        {
+            return;
+        }
+
+        var titleBar = _appWindow.TitleBar;
         var darkTheme = ((FrameworkElement)Content).ActualTheme == ElementTheme.Dark;
 
         titleBar.ButtonForegroundColor = darkTheme ? Colors.White : Colors.Black;
@@ -152,12 +175,24 @@ public sealed partial class MainWindow : Window
     private void Window_Activated(object sender, WindowActivatedEventArgs args)
     {
         if (_configurationSource != null)
+        {
             _configurationSource.IsInputActive = args.WindowActivationState != WindowActivationState.Deactivated;
+        }
+    }
+
+    private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_isExitRequested || !App.Settings.CloseToBackground)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        HideToBackground();
     }
 
     private async void Window_Closed(object sender, WindowEventArgs args)
     {
-        // Persist playback state before disposing services
         await App.PersistPlaybackStateAsync(force: true);
 
         _hotkeyService?.Dispose();
@@ -171,6 +206,16 @@ public sealed partial class MainWindow : Window
             _acrylicController.Dispose();
             _acrylicController = null;
         }
+
+        if (_appWindow is not null)
+        {
+            _appWindow.Closing -= OnAppWindowClosing;
+            _appWindow = null;
+        }
+
+        _trayIconService?.Dispose();
+        _trayIconService = null;
+
         _configurationSource = null;
     }
 
@@ -185,11 +230,17 @@ public sealed partial class MainWindow : Window
 
     private void SetConfigurationSourceTheme()
     {
-        switch (((FrameworkElement)this.Content).ActualTheme)
+        switch (((FrameworkElement)Content).ActualTheme)
         {
-            case ElementTheme.Dark: _configurationSource!.Theme = SystemBackdropTheme.Dark; break;
-            case ElementTheme.Light: _configurationSource!.Theme = SystemBackdropTheme.Light; break;
-            case ElementTheme.Default: _configurationSource!.Theme = SystemBackdropTheme.Default; break;
+            case ElementTheme.Dark:
+                _configurationSource!.Theme = SystemBackdropTheme.Dark;
+                break;
+            case ElementTheme.Light:
+                _configurationSource!.Theme = SystemBackdropTheme.Light;
+                break;
+            default:
+                _configurationSource!.Theme = SystemBackdropTheme.Default;
+                break;
         }
     }
 
@@ -214,24 +265,21 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // Already on the root page of this section — nothing to do.
         if (RootFrame.CurrentSourcePageType == rootPageType)
         {
             return;
         }
 
-        // If the target root page is already in the back stack (we're in a sub-page
-        // of this section), navigate back to it instead of creating a new instance.
         if (IsPageInBackStack(rootPageType))
         {
             while (RootFrame.CanGoBack && RootFrame.CurrentSourcePageType != rootPageType)
             {
                 RootFrame.GoBack();
             }
+
             return;
         }
 
-        // Switching to a different section — clear old pages to avoid memory leaks.
         RootFrame.BackStack.Clear();
         RootFrame.Navigate(rootPageType);
     }
@@ -241,18 +289,22 @@ public sealed partial class MainWindow : Window
         for (var i = 0; i < RootFrame.BackStack.Count; i++)
         {
             if (RootFrame.BackStack[i].SourcePageType == pageType)
+            {
                 return true;
+            }
         }
+
         return false;
     }
 
     private void OnPlayerBarTapped(object? sender, EventArgs e)
     {
-        // Only respond when a track is loaded.
         if (App.AudioPlayer?.CurrentTrack is null)
+        {
             return;
+        }
 
-        if (NowPlayingPage.Visibility == Microsoft.UI.Xaml.Visibility.Visible)
+        if (NowPlayingPage.Visibility == Visibility.Visible)
         {
             _ = NowPlayingPage.HideAsync();
         }
@@ -262,12 +314,13 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // ── Global hotkey handlers ──────────────────────────────────
-
     private async void OnHotkeyPlayPause()
     {
         var player = App.AudioPlayer;
-        if (player is null) return;
+        if (player is null)
+        {
+            return;
+        }
 
         switch (player.State)
         {
@@ -279,7 +332,9 @@ public sealed partial class MainWindow : Window
                 break;
             default:
                 if (player.CurrentTrack is not null)
+                {
                     await player.PlayAsync(player.CurrentTrack);
+                }
                 break;
         }
     }
@@ -287,24 +342,55 @@ public sealed partial class MainWindow : Window
     private async void OnHotkeyNext()
     {
         if (App.AudioPlayer is { } player)
+        {
             await player.NextAsync();
+        }
     }
 
     private async void OnHotkeyPrevious()
     {
         if (App.AudioPlayer is { } player)
+        {
             await player.PreviousAsync();
+        }
     }
 
     private void OnHotkeyVolumeUp()
     {
         if (App.AudioPlayer is { } player)
+        {
             player.Volume = Math.Min(1.0, player.Volume + 0.05);
+        }
     }
 
     private void OnHotkeyVolumeDown()
     {
         if (App.AudioPlayer is { } player)
+        {
             player.Volume = Math.Max(0.0, player.Volume - 0.05);
+        }
     }
+
+    private void HideToBackground()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            ShowWindow(_hwnd, SW_HIDE);
+        }
+    }
+
+    private void ExitApplication()
+    {
+        _isExitRequested = true;
+        Close();
+    }
+
+    private const int SW_HIDE = 0;
+    private const int SW_RESTORE = 9;
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 }

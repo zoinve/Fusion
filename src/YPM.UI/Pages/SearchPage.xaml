@@ -55,10 +55,12 @@
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                     <TextBlock
-                        Text="{x:Bind Name}"
                         FontSize="14"
                         FontWeight="SemiBold"
-                        TextTrimming="CharacterEllipsis" />
+                        TextTrimming="CharacterEllipsis">
+                        <Run Text="{x:Bind Name}" />
+                        <Run Text="{x:Bind DisplayAliasText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
                     <TextBlock
                         Text="{x:Bind Subtitle}"
                         FontSize="12"
@@ -244,11 +246,6 @@
                         FontSize="14"
                         Opacity="0.6"
                         VerticalAlignment="Center" />
-                    <ProgressRing
-                        Grid.Column="1"
-                        Width="28"
-                        Height="28"
-                        IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
                 </Grid>
 
                 <!-- Songs section -->
@@ -292,10 +289,12 @@
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                                         <TextBlock
-                                            Text="{x:Bind Name}"
                                             FontSize="14"
                                             FontWeight="SemiBold"
-                                            TextTrimming="CharacterEllipsis" />
+                                            TextTrimming="CharacterEllipsis">
+                                            <Run Text="{x:Bind Name}" />
+                                            <Run Text="{x:Bind DisplayAliasText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </TextBlock>
                                         <TextBlock
                                             Text="{x:Bind Subtitle}"
                                             FontSize="12"

@@ -134,6 +134,8 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
 
     public string CurrentTrackName => _currentTrack?.Name ?? string.Empty;
 
+    public string CurrentTrackAliasText => _currentTrack?.DisplayAliasText ?? string.Empty;
+
     public string CurrentTrackArtistsText => _currentTrack?.ArtistsText ?? string.Empty;
 
     public string CurrentTrackCoverUrl => _currentTrack?.Album?.CoverUrl ?? string.Empty;
@@ -284,6 +286,7 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(LikeGlyph));
             OnPropertyChanged(nameof(CurrentTrackId));
             OnPropertyChanged(nameof(CurrentTrackName));
+            OnPropertyChanged(nameof(CurrentTrackAliasText));
             OnPropertyChanged(nameof(CurrentTrackArtistsText));
             OnPropertyChanged(nameof(CurrentTrackCoverUrl));
             OnPropertyChanged(nameof(DurationText));
@@ -345,6 +348,7 @@ public sealed class PlayerBarViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(CurrentQueueIndex));
             OnPropertyChanged(nameof(HasQueue));
             OnPropertyChanged(nameof(CurrentTrackName));
+            OnPropertyChanged(nameof(CurrentTrackAliasText));
             OnPropertyChanged(nameof(CurrentTrackArtistsText));
             OnPropertyChanged(nameof(CurrentTrackCoverUrl));
         });

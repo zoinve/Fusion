@@ -14,6 +14,7 @@ namespace YPM.Api;
 public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
 {
     private readonly HttpClient _httpClient;
+    private readonly HttpClient _noRedirectHttpClient;
     private readonly CookieContainer _cookies;
     private readonly ApiOptions _options;
     private readonly ILocalCacheService? _cacheService;
@@ -44,6 +45,22 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/"),
             Timeout = TimeSpan.FromSeconds(15),
         };
+
+        var noRedirectHandler = new HttpClientHandler
+        {
+            CookieContainer = _cookies,
+            UseCookies = true,
+            AllowAutoRedirect = false,
+            AutomaticDecompression = DecompressionMethods.All,
+        };
+
+        _noRedirectHttpClient = new HttpClient(noRedirectHandler)
+        {
+            BaseAddress = _httpClient.BaseAddress,
+            Timeout = TimeSpan.FromSeconds(15),
+        };
+
+        EnsureDefaultClientCookies();
 
         if (!string.IsNullOrWhiteSpace(sessionCookie))
         {
@@ -78,6 +95,26 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
                 // Ignore invalid cookie parts
             }
             ExtractMusicU(trimmed);
+        }
+
+        EnsureDefaultClientCookies();
+    }
+
+    private void EnsureDefaultClientCookies()
+    {
+        var baseUri = _httpClient.BaseAddress;
+        if (baseUri is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _cookies.Add(baseUri, new Cookie("os", "pc", "/"));
+        }
+        catch
+        {
+            // Ignore failures setting compatibility cookies.
         }
     }
 
@@ -807,6 +844,84 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
             ["id"] = ids, ["level"] = level,
         }, cancellationToken);
         return root["data"]?.AsArray().Select(MapTrackUrl).Where(x => x is not null).Cast<TrackUrlInfo>().ToList() ?? [];
+    }
+
+    public async Task<string?> GetSongUrlV1RedirectAsync(long id, string level = "exhigh", bool unblock = true, CancellationToken cancellationToken = default)
+    {
+        var query = new Dictionary<string, string?>
+        {
+            ["id"] = id.ToString(),
+            ["level"] = level,
+            ["unblock"] = unblock ? "true" : "false",
+        };
+
+        const int maxAttempts = 3;
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                var requestUri = BuildUri("song/url/v1/302", query);
+                using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                using var response = await _noRedirectHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+                if (response.StatusCode is HttpStatusCode.Moved or HttpStatusCode.Redirect or HttpStatusCode.RedirectMethod or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
+                {
+                    var location = response.Headers.Location;
+                    if (location is null)
+                    {
+                        return null;
+                    }
+
+                    var resolved = location.IsAbsoluteUri ? location : new Uri(requestUri, location);
+                    return resolved.ToString();
+                }
+
+                if (IsTransientStatusCode(response.StatusCode) && attempt < maxAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken);
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                var finalUri = response.RequestMessage?.RequestUri;
+                if (finalUri is not null && finalUri != requestUri)
+                {
+                    return finalUri.ToString();
+                }
+
+                return null;
+            }
+            catch (Exception ex) when (attempt < maxAttempts && IsTransientException(ex))
+            {
+                lastError = ex;
+                if (IsConnectionRefused(ex))
+                {
+                    await TryRestartBackendAsync();
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                if (IsConnectionRefused(ex))
+                {
+                    await TryRestartBackendAsync();
+                }
+
+                break;
+            }
+        }
+
+        if (lastError is not null)
+        {
+            throw lastError;
+        }
+
+        return null;
     }
 
     public async Task<SongMusicDetailResult?> GetSongMusicDetailAsync(long id, CancellationToken cancellationToken = default)
@@ -2088,6 +2203,10 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
         {
             Id = GetInt64(item["id"]),
             Name = GetString(item["name"]) ?? "",
+            Alias = item["alia"]?.AsArray().Select(a => GetString(a) ?? "").Where(static s => s.Length > 0).ToList()
+                ?? item["alias"]?.AsArray().Select(a => GetString(a) ?? "").Where(static s => s.Length > 0).ToList()
+                ?? item["tns"]?.AsArray().Select(a => GetString(a) ?? "").Where(static s => s.Length > 0).ToList()
+                ?? [],
             Artists = item["ar"]?.AsArray().Select(ar => new ArtistSummary
             {
                 Id = GetInt64(ar?["id"]),
@@ -2485,7 +2604,11 @@ public sealed class NeteaseApiClient : INeteaseApiClient, IDisposable
         _ => false,
     };
 
-    public void Dispose() => _httpClient.Dispose();
+    public void Dispose()
+    {
+        _noRedirectHttpClient.Dispose();
+        _httpClient.Dispose();
+    }
 }
 
 internal sealed class CachedApiResponse

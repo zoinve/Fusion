@@ -53,10 +53,19 @@
         </ResourceDictionary>
     </Page.Resources>
 
-    <Grid x:Name="RootGrid" Background="{ThemeResource PlayerBarBackgroundBrush}" KeyDown="OnPageKeyDown">
+    <Grid x:Name="RootGrid" KeyDown="OnPageKeyDown">
         <Grid.RenderTransform>
             <CompositeTransform x:Name="RootTransform" />
         </Grid.RenderTransform>
+
+        <Grid.Resources>
+            <SolidColorBrush x:Key="NowPlayingAccentBrush" x:Name="NowPlayingAccentBrush" Color="#FFD7D7D7" />
+            <SolidColorBrush x:Key="NowPlayingTrackBrush" x:Name="NowPlayingTrackBrush" Color="#66FFFFFF" />
+        </Grid.Resources>
+
+        <Grid.Background>
+            <SolidColorBrush x:Name="NowPlayingBackgroundBrush" Color="#FF121212" />
+        </Grid.Background>
         
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="14*" />
@@ -101,8 +110,10 @@
                     FontSize="24"
                     FontWeight="SemiBold"
                     MaxLines="1"
-                    Text="{x:Bind ViewModel.CurrentTrackName, Mode=OneWay}"
-                    TextTrimming="CharacterEllipsis" />
+                    TextTrimming="CharacterEllipsis">
+                    <Run Text="{x:Bind ViewModel.CurrentTrackName, Mode=OneWay}" />
+                    <Run Text="{x:Bind ViewModel.CurrentTrackAliasText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </TextBlock>
                 <TextBlock
                     x:Name="ArtistNameText"
                     FontSize="15"
@@ -153,7 +164,7 @@
                         <Border
                             Height="4"
                             VerticalAlignment="Center"
-                            Background="{ThemeResource PlayerBarTrackFillBrush}"
+                            Background="{StaticResource NowPlayingTrackBrush}"
                             CornerRadius="2" />
                         <Border
                             x:Name="ProgressFill"
@@ -161,7 +172,7 @@
                             Height="4"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Center"
-                            Background="{ThemeResource PlayerBarAccentBrush}"
+                            Background="{StaticResource NowPlayingAccentBrush}"
                             CornerRadius="2" />
                     </Grid>
 
@@ -237,16 +248,9 @@
         <!-- Right Text Area -->
         <Grid Grid.Column="3">
             <!-- Lyrics Area -->
-            <Grid 
-                x:Name="RightPanel" 
+            <Grid
+                x:Name="RightPanel"
                 SizeChanged="OnRightPanelSizeChanged">
-                <ProgressRing
-                    Width="24"
-                    Height="24"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    IsActive="{x:Bind ViewModel.IsLyricsLoading, Mode=OneWay}" />
-
                 <TextBlock
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
@@ -298,6 +302,23 @@
                     </ListView.ItemTemplate>
                 </ListView>
             </Grid>
+
+            <!-- Translation Toggle Button -->
+            <Button
+                x:Name="TranslationToggleButton"
+                Width="32"
+                Height="32"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,12,20"
+                Padding="4"
+                Background="Transparent"
+                Click="OnTranslationToggleClick"
+                CornerRadius="16"
+                Opacity="0.4"
+                Visibility="{x:Bind ViewModel.HasLyrics, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                <TextBlock FontSize="13" Text="译" />
+            </Button>
         </Grid>
 
         <!-- Top Right Controls (Floating) -->

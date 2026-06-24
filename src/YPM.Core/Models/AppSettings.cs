@@ -51,4 +51,5 @@ public sealed class AppSettings
     public bool SubTitleDefault { get; set; }
     public bool EnableReversedMode { get; set; }
     public bool EnableAcrylic { get; set; }
+    public bool CloseToBackground { get; set; } = true;
 }

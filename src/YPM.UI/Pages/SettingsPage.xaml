@@ -212,6 +212,21 @@
                                 IsOn="{x:Bind ViewModel.EnableAcrylic, Mode=TwoWay}"
                                 HorizontalAlignment="Right" />
                         </Grid>
+
+                        <Grid ColumnSpacing="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE7F4;" FontSize="20" VerticalAlignment="Center" />
+                            <ToggleSwitch
+                                Grid.Column="1"
+                                Header="关闭页面时保留在后台"
+                                OffContent="退出应用"
+                                OnContent="最小化到托盘"
+                                IsOn="{x:Bind ViewModel.CloseToBackground, Mode=TwoWay}"
+                                HorizontalAlignment="Right" />
+                        </Grid>
                     </StackPanel>
                 </Border>
             </StackPanel>

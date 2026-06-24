@@ -23,8 +23,8 @@
     <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
     <WindowsAppSdkUndockedRegFreeWinRTInitialize>true</WindowsAppSdkUndockedRegFreeWinRTInitialize>
     <ApplicationIcon>Assets\fusion.ico</ApplicationIcon>
-    <Version>1.1.0</Version>
-    <ApplicationDisplayVersion>1.1.0</ApplicationDisplayVersion>
+    <Version>1.1.2</Version>
+    <ApplicationDisplayVersion>1.1.2</ApplicationDisplayVersion>
     <BundledNodeSource Condition="'$(BundledNodeSource)' == ''">$(ProgramW6432)\nodejs\node.exe</BundledNodeSource>
     <BundledNodeSource Condition="'$(BundledNodeSource)' == '' Or !Exists('$(BundledNodeSource)')">$(ProgramFiles)\nodejs\node.exe</BundledNodeSource>
   </PropertyGroup>

@@ -8,7 +8,7 @@
   <Identity
     Name="Fusion.Fusion"
     Publisher="CN=Fusion"
-    Version="1.1.0.0" />
+    Version="1.1.2.0" />
 
   <Properties>
     <DisplayName>Fusion</DisplayName>

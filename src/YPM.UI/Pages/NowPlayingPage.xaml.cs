@@ -1,10 +1,14 @@
 using System.Linq;
+using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media;
+using Windows.Graphics.Imaging;
+using Windows.Storage;
+using Windows.UI;
 using WinRT.Interop;
 using YPM.UI.Helpers;
 using YPM.UI.ViewModels;
@@ -18,6 +22,8 @@ public sealed partial class NowPlayingPage : Page
     private bool _isAdjustingVolume;
     private bool _isFullscreen;
     private int _lastScaledLyricIndex = -1;
+    private string? _lastBackgroundCoverUrl;
+    private long _backgroundUpdateVersion;
 
     public NowPlayingViewModel ViewModel => _viewModel!;
 
@@ -97,7 +103,9 @@ public sealed partial class NowPlayingPage : Page
         InitializeViewModel();
         UpdateProgressVisual();
         CenterCurrentLyric();
+        TranslationToggleButton.Opacity = _viewModel?.ShowLyricsTranslation == true ? 0.55 : 0.3;
         Bindings.Update();
+        _ = UpdateBackgroundFromCoverAsync();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -122,6 +130,11 @@ public sealed partial class NowPlayingPage : Page
         if (e.PropertyName is nameof(NowPlayingViewModel.Lyrics) or nameof(NowPlayingViewModel.CurrentLyricIndex))
         {
             _ = DispatcherQueue.TryEnqueue(CenterCurrentLyric);
+        }
+
+        if (e.PropertyName is nameof(NowPlayingViewModel.CurrentTrackCoverUrl))
+        {
+            _ = UpdateBackgroundFromCoverAsync();
         }
     }
 
@@ -399,6 +412,14 @@ public sealed partial class NowPlayingPage : Page
         }
     }
 
+    private void OnTranslationToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        _viewModel.ShowLyricsTranslation = !_viewModel.ShowLyricsTranslation;
+        TranslationToggleButton.Opacity = _viewModel.ShowLyricsTranslation ? 0.55 : 0.3;
+    }
+
     private async void OnArtistTapped(object sender, TappedRoutedEventArgs e)
     {
         var artistId = _viewModel?.CurrentTrack?.Artists?.FirstOrDefault()?.Id;
@@ -417,6 +438,264 @@ public sealed partial class NowPlayingPage : Page
             await HideAsync();
             App.NavigationService?.Navigate(Core.Services.PageRoute.AlbumDetail, albumId.Value);
         }
+    }
+
+    private async Task UpdateBackgroundFromCoverAsync()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var coverUrl = NormalizeCoverUrl(_viewModel.CurrentTrackCoverUrl);
+        if (string.Equals(_lastBackgroundCoverUrl, coverUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _lastBackgroundCoverUrl = coverUrl;
+        var version = Interlocked.Increment(ref _backgroundUpdateVersion);
+
+        if (string.IsNullOrWhiteSpace(coverUrl))
+        {
+            await DispatcherQueue.EnqueueAsync(() => ApplyNowPlayingPalette(Colors.Black));
+            return;
+        }
+
+        try
+        {
+            var imagePath = await ResolveCoverPathAsync(coverUrl);
+            var color = imagePath is not null
+                ? await ExtractMonetColorAsync(imagePath)
+                : Colors.Black;
+
+            if (version != _backgroundUpdateVersion)
+            {
+                return;
+            }
+
+            await DispatcherQueue.EnqueueAsync(() => ApplyNowPlayingPalette(color));
+        }
+        catch
+        {
+            if (version != _backgroundUpdateVersion)
+            {
+                return;
+            }
+
+            await DispatcherQueue.EnqueueAsync(() => ApplyNowPlayingPalette(Colors.Black));
+        }
+    }
+
+    private static string NormalizeCoverUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return string.Empty;
+        }
+
+        var normalized = url.Trim();
+        if (normalized.StartsWith("//", StringComparison.Ordinal))
+        {
+            normalized = $"https:{normalized}";
+        }
+        else if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = $"https://{normalized["http://".Length..]}";
+        }
+
+        return normalized;
+    }
+
+    private static async Task<string?> ResolveCoverPathAsync(string coverUrl)
+    {
+        var cache = App.ImageCacheService;
+        if (cache is null)
+        {
+            return null;
+        }
+
+        var cachedPath = cache.GetCachedFilePath(coverUrl);
+        if (!string.IsNullOrWhiteSpace(cachedPath) && File.Exists(cachedPath))
+        {
+            return cachedPath;
+        }
+
+        await cache.CacheImageAsync(coverUrl);
+        cachedPath = cache.GetCachedFilePath(coverUrl);
+        return !string.IsNullOrWhiteSpace(cachedPath) && File.Exists(cachedPath) ? cachedPath : null;
+    }
+
+    private static async Task<Color> ExtractMonetColorAsync(string imagePath)
+    {
+        var file = await StorageFile.GetFileFromPathAsync(imagePath);
+        using var stream = await file.OpenReadAsync();
+        var decoder = await BitmapDecoder.CreateAsync(stream);
+        var transform = new BitmapTransform
+        {
+            ScaledWidth = Math.Max(1u, Math.Min(96u, decoder.PixelWidth)),
+            ScaledHeight = Math.Max(1u, Math.Min(96u, decoder.PixelHeight)),
+        };
+
+        var pixelData = await decoder.GetPixelDataAsync(
+            BitmapPixelFormat.Bgra8,
+            BitmapAlphaMode.Straight,
+            transform,
+            ExifOrientationMode.RespectExifOrientation,
+            ColorManagementMode.DoNotColorManage);
+
+        var pixels = pixelData.DetachPixelData();
+        if (pixels.Length < 4)
+        {
+            return Colors.Black;
+        }
+
+        double sumR = 0;
+        double sumG = 0;
+        double sumB = 0;
+        double totalWeight = 0;
+
+        for (int i = 0; i <= pixels.Length - 4; i += 16)
+        {
+            var b = pixels[i];
+            var g = pixels[i + 1];
+            var r = pixels[i + 2];
+            var a = pixels[i + 3];
+
+            if (a < 32)
+            {
+                continue;
+            }
+
+            var max = Math.Max(r, Math.Max(g, b));
+            var min = Math.Min(r, Math.Min(g, b));
+            var saturation = max == 0 ? 0 : (max - min) / (double)max;
+            var luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255d;
+
+            if (luminance < 0.08 || luminance > 0.92)
+            {
+                continue;
+            }
+
+            var saturationBoost = 0.35 + saturation * 0.65;
+            var luminanceBias = 1.0 - Math.Abs(luminance - 0.55) * 1.4;
+            var weight = Math.Max(0.05, saturationBoost * luminanceBias);
+
+            sumR += r * weight;
+            sumG += g * weight;
+            sumB += b * weight;
+            totalWeight += weight;
+        }
+
+        if (totalWeight <= 0.001)
+        {
+            return Color.FromArgb(255, 28, 28, 28);
+        }
+
+        var avgR = sumR / totalWeight;
+        var avgG = sumG / totalWeight;
+        var avgB = sumB / totalWeight;
+        return ToMonetTone(avgR, avgG, avgB);
+    }
+
+    private static Color ToMonetTone(double red, double green, double blue)
+    {
+        var gray = (red + green + blue) / 3d;
+        red = gray * 0.28 + red * 0.72;
+        green = gray * 0.28 + green * 0.72;
+        blue = gray * 0.28 + blue * 0.72;
+
+        red = 18 + red * 0.62;
+        green = 18 + green * 0.62;
+        blue = 18 + blue * 0.62;
+
+        var max = Math.Max(red, Math.Max(green, blue));
+        if (max < 72)
+        {
+            var scale = 72 / Math.Max(1, max);
+            red *= scale;
+            green *= scale;
+            blue *= scale;
+        }
+
+        return Color.FromArgb(
+            255,
+            (byte)Math.Clamp(Math.Round(red), 0, 255),
+            (byte)Math.Clamp(Math.Round(green), 0, 255),
+            (byte)Math.Clamp(Math.Round(blue), 0, 255));
+    }
+
+    private void ApplyNowPlayingPalette(Color backgroundColor)
+    {
+        AnimateBrushColor(NowPlayingBackgroundBrush, backgroundColor);
+        AnimateBrushColor(NowPlayingAccentBrush, CreateProgressAccentColor(backgroundColor));
+        AnimateBrushColor(NowPlayingTrackBrush, CreateProgressTrackColor(backgroundColor));
+    }
+
+    private static Color CreateProgressAccentColor(Color backgroundColor)
+    {
+        var lift = 0.42;
+        var saturationBoost = 1.2;
+        var red = LiftChannel(backgroundColor.R, lift);
+        var green = LiftChannel(backgroundColor.G, lift);
+        var blue = LiftChannel(backgroundColor.B, lift);
+        return ApplySaturation(red, green, blue, saturationBoost, alpha: 255);
+    }
+
+    private static Color CreateProgressTrackColor(Color backgroundColor)
+    {
+        var lift = 0.18;
+        var saturationBoost = 0.82;
+        var red = LiftChannel(backgroundColor.R, lift);
+        var green = LiftChannel(backgroundColor.G, lift);
+        var blue = LiftChannel(backgroundColor.B, lift);
+        return ApplySaturation(red, green, blue, saturationBoost, alpha: 150);
+    }
+
+    private static double LiftChannel(byte channel, double amount)
+    {
+        return channel + (255 - channel) * amount;
+    }
+
+    private static Color ApplySaturation(double red, double green, double blue, double factor, byte alpha)
+    {
+        var gray = (red + green + blue) / 3d;
+        red = gray + (red - gray) * factor;
+        green = gray + (green - gray) * factor;
+        blue = gray + (blue - gray) * factor;
+
+        return Color.FromArgb(
+            alpha,
+            (byte)Math.Clamp(Math.Round(red), 0, 255),
+            (byte)Math.Clamp(Math.Round(green), 0, 255),
+            (byte)Math.Clamp(Math.Round(blue), 0, 255));
+    }
+
+    private static void AnimateBrushColor(SolidColorBrush? brush, Color color)
+    {
+        if (brush is null)
+        {
+            return;
+        }
+
+        if (brush.Color == color)
+        {
+            return;
+        }
+
+        var animation = new ColorAnimation
+        {
+            To = color,
+            Duration = TimeSpan.FromMilliseconds(420),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            EnableDependentAnimation = true
+        };
+
+        var storyboard = new Storyboard();
+        Storyboard.SetTarget(animation, brush);
+        Storyboard.SetTargetProperty(animation, "Color");
+        storyboard.Children.Add(animation);
+        storyboard.Begin();
     }
 
     private static ScaleTransform? FindScaleTransform(DependencyObject element)
@@ -455,5 +734,30 @@ public sealed partial class NowPlayingPage : Page
         storyboard.Children.Add(animX);
         storyboard.Children.Add(animY);
         storyboard.Begin();
+    }
+}
+
+internal static class DispatcherQueueExtensions
+{
+    public static Task EnqueueAsync(this Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue, Action action)
+    {
+        var tcs = new TaskCompletionSource();
+        if (!dispatcherQueue.TryEnqueue(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult();
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            }))
+        {
+            tcs.SetCanceled();
+        }
+
+        return tcs.Task;
     }
 }

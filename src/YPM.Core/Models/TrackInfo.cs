@@ -6,6 +6,8 @@ public class TrackInfo
 
     public string Name { get; set; } = string.Empty;
 
+    public List<string> Alias { get; set; } = [];
+
     public List<ArtistSummary> Artists { get; set; } = [];
 
     public AlbumSummary? Album { get; set; }
@@ -24,6 +26,10 @@ public class TrackInfo
 
     public long ActualSr { get; set; }
 
+    public uint ActualChannels { get; set; }
+
+    public uint ActualBitsPerSample { get; set; }
+
     public int DiscNumber { get; set; }
 
     public int TrackNumber { get; set; }
@@ -35,6 +41,10 @@ public class TrackInfo
     public string ArtistsText => string.Join(" / ", Artists.Select(a => a.Name));
 
     public string AlbumName => Album?.Name ?? string.Empty;
+
+    public string AliasText => string.Join(" / ", Alias.Where(static a => !string.IsNullOrWhiteSpace(a)));
+
+    public string DisplayAliasText => string.IsNullOrWhiteSpace(AliasText) ? string.Empty : $"（{AliasText}）";
 
     public string ListCoverUrl { get; set; } = string.Empty;
 

@@ -29,6 +29,8 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     private string? _currentSessionId;
     private long _currentSessionTrackId;
     private long _lastSubmittedProgressSeconds = -1;
+    private MediaPlaybackItem? _currentPlaybackItem;
+    private bool _shouldAutoPlayCurrentSource;
 
     public AudioPlayerService(INeteaseApiClient apiClient)
     {
@@ -95,6 +97,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         _player = new MediaPlayer { IsMuted = _isMuted, Volume = _volume };
         _player.MediaEnded += OnMediaEnded;
         _player.MediaFailed += OnMediaFailed;
+        _player.MediaOpened += OnMediaOpened;
         _player.PlaybackSession.PlaybackStateChanged += OnPlaybackStateChanged;
 
         _timer = _dispatcherQueue?.CreateTimer();
@@ -169,6 +172,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         var playbackUri = await ResolvePlaybackUriAsync(track, cancellationToken);
         if (playbackUri is null)
         {
+            _shouldAutoPlayCurrentSource = false;
             SetState(PlayerState.Stopped);
             return;
         }
@@ -181,6 +185,8 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         props.MusicProperties.AlbumTitle = track.AlbumName;
         props.MusicProperties.TrackNumber = (uint)track.TrackNumber;
         item.ApplyDisplayProperties(props);
+        _currentPlaybackItem = item;
+        _shouldAutoPlayCurrentSource = true;
         _player!.Source = item;
         _player.Play();
         _timer!.Start();
@@ -228,25 +234,37 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         try
         {
             var level = MusicQualityToLevel(App.Settings.MusicQuality);
-            var urls = await _apiClient.GetSongUrlsV1Async(track.Id.ToString(), level);
-            var matched = urls.FirstOrDefault(u => u.Code == 200 && !string.IsNullOrWhiteSpace(u.Url));
-            if (matched is not null)
+            track.ActualQualityLevel = level;
+
+            var redirectedUrl = await _apiClient.GetSongUrlV1RedirectAsync(track.Id, level, cancellationToken: cancellationToken);
+            if (!string.IsNullOrWhiteSpace(redirectedUrl))
             {
-                if (matched.Br > 0)
-                {
-                    track.Br = matched.Br;
-                }
-                if (!string.IsNullOrWhiteSpace(matched.Level))
-                {
-                    track.ActualQualityLevel = matched.Level;
-                }
-                if (matched.Sr > 0)
-                {
-                    track.ActualSr = matched.Sr;
-                }
-                return matched.Url;
+                return redirectedUrl;
             }
-            return null;
+
+            var urls = await _apiClient.GetSongUrlsV1Async(track.Id.ToString(), level, cancellationToken);
+            var matched = urls.FirstOrDefault(u => u.Code == 200 && !string.IsNullOrWhiteSpace(u.Url));
+            if (matched is null)
+            {
+                return null;
+            }
+
+            if (matched.Br > 0)
+            {
+                track.Br = matched.Br;
+            }
+
+            if (!string.IsNullOrWhiteSpace(matched.Level))
+            {
+                track.ActualQualityLevel = matched.Level;
+            }
+
+            if (matched.Sr > 0)
+            {
+                track.ActualSr = matched.Sr;
+            }
+
+            return matched.Url;
         }
         catch
         {
@@ -256,6 +274,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
 
     private static string MusicQualityToLevel(long bitrate) => bitrate switch
     {
+        >= 1999000 => "hires",
         >= 999000 => "lossless",
         >= 320000 => "exhigh",
         >= 192000 => "higher",
@@ -271,6 +290,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     public async Task ResumeAsync()
     {
         EnsureInitialized();
+        _shouldAutoPlayCurrentSource = false;
         _player!.Play();
         _timer!.Start();
         await Task.CompletedTask;
@@ -279,6 +299,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     public async Task PauseAsync()
     {
         EnsureInitialized();
+        _shouldAutoPlayCurrentSource = false;
         _player!.Pause();
         _timer!.Stop();
         await Task.CompletedTask;
@@ -290,6 +311,8 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         await FinalizePlaybackReportingAsync();
         _player!.Pause();
         _player.Source = null;
+        _currentPlaybackItem = null;
+        _shouldAutoPlayCurrentSource = false;
         _timer!.Stop();
         SetState(PlayerState.Stopped);
         ResetPlaybackSession();
@@ -401,7 +424,125 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
     {
         var dispatcherQueue = _dispatcherQueue;
         if (dispatcherQueue is null) return;
-        _ = dispatcherQueue.EnqueueAsync(() => SetState(PlayerState.Stopped));
+        _ = dispatcherQueue.EnqueueAsync(() =>
+        {
+            _currentPlaybackItem = null;
+            _shouldAutoPlayCurrentSource = false;
+            SetState(PlayerState.Stopped);
+        });
+    }
+
+    private void OnMediaOpened(MediaPlayer sender, object args)
+    {
+        var track = _current;
+        var item = _currentPlaybackItem;
+        if (track is null || item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_shouldAutoPlayCurrentSource && _state != PlayerState.Playing)
+            {
+                sender.Play();
+                _timer?.Start();
+            }
+
+            if (TryGetActualAudioProperties(item, out var bitrate, out var sampleRate, out var channelCount, out var bitsPerSample))
+            {
+                var changed = false;
+
+                if (bitrate > 0 && track.Br != bitrate)
+                {
+                    track.Br = bitrate;
+                    changed = true;
+                }
+
+                if (sampleRate > 0 && track.ActualSr != sampleRate)
+                {
+                    track.ActualSr = sampleRate;
+                    changed = true;
+                }
+
+                if (channelCount > 0 && track.ActualChannels != channelCount)
+                {
+                    track.ActualChannels = channelCount;
+                    changed = true;
+                }
+
+                if (bitsPerSample > 0 && track.ActualBitsPerSample != bitsPerSample)
+                {
+                    track.ActualBitsPerSample = bitsPerSample;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    TrackChanged?.Invoke(this, track);
+                }
+            }
+        }
+        catch
+        {
+            // Actual media property extraction is best-effort.
+        }
+    }
+
+    private static bool TryGetActualAudioProperties(MediaPlaybackItem item, out long bitrate, out long sampleRate, out uint channelCount, out uint bitsPerSample)
+    {
+        bitrate = 0;
+        sampleRate = 0;
+        channelCount = 0;
+        bitsPerSample = 0;
+
+        var tracks = item.AudioTracks;
+        if (tracks is null || tracks.Count == 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < tracks.Count; i++)
+        {
+            var track = tracks[i];
+            if (track is null)
+            {
+                continue;
+            }
+
+            var encoding = track.GetEncodingProperties();
+            if (encoding is null)
+            {
+                continue;
+            }
+
+            if (encoding.Bitrate > 0)
+            {
+                bitrate = encoding.Bitrate;
+            }
+
+            if (encoding.SampleRate > 0)
+            {
+                sampleRate = encoding.SampleRate;
+            }
+
+            if (encoding.ChannelCount > 0)
+            {
+                channelCount = encoding.ChannelCount;
+            }
+
+            if (encoding.BitsPerSample > 0)
+            {
+                bitsPerSample = encoding.BitsPerSample;
+            }
+
+            if (bitrate > 0 || sampleRate > 0 || channelCount > 0 || bitsPerSample > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnPlaybackStateChanged(MediaPlaybackSession sender, object args)
@@ -416,6 +557,10 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
                 MediaPlaybackState.Paused => PlayerState.Paused,
                 _ => PlayerState.Idle,
             };
+            if (s == PlayerState.Playing)
+            {
+                _shouldAutoPlayCurrentSource = false;
+            }
             if (s != _state) SetState(s);
         });
     }
@@ -605,6 +750,7 @@ public sealed class AudioPlayerService : IAudioPlayerService, IDisposable
         {
             _player.MediaEnded -= OnMediaEnded;
             _player.MediaFailed -= OnMediaFailed;
+            _player.MediaOpened -= OnMediaOpened;
             _player.PlaybackSession.PlaybackStateChanged -= OnPlaybackStateChanged;
             _player.Dispose();
         }

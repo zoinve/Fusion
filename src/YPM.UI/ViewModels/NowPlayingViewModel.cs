@@ -22,12 +22,15 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
     private int _currentLyricIndex = -1;
     private bool _isLyricsLoading;
     private string _audioQualitySummary = string.Empty;
+    private bool _showLyricsTranslation = true;
+    private readonly Dictionary<int, string> _storedTranslations = [];
 
     public NowPlayingViewModel(IAudioPlayerService player, ILikedSongsService? likedService, DispatcherQueue dispatcher)
     {
         _player = player;
         _likedService = likedService;
         _dispatcher = dispatcher;
+        _showLyricsTranslation = App.Settings.ShowLyricsTranslation;
 
         _player.TrackChanged += OnTrackChanged;
         _player.StateChanged += OnStateChanged;
@@ -132,6 +135,20 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
 
     public bool HasLyrics => _lyrics.Count > 0;
 
+    public bool ShowLyricsTranslation
+    {
+        get => _showLyricsTranslation;
+        set
+        {
+            if (SetProperty(ref _showLyricsTranslation, value))
+            {
+                App.Settings.ShowLyricsTranslation = value;
+                _ = SaveSettingsAsync();
+                ApplyTranslationVisibility();
+            }
+        }
+    }
+
     public bool IsPlaying => _state == PlayerState.Playing;
 
     public bool IsPaused => _state == PlayerState.Paused;
@@ -168,6 +185,8 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
     }
 
     public string CurrentTrackName => _currentTrack?.Name ?? string.Empty;
+
+    public string CurrentTrackAliasText => _currentTrack?.DisplayAliasText ?? string.Empty;
 
     public string CurrentTrackArtistsText => _currentTrack?.ArtistsText ?? string.Empty;
 
@@ -308,35 +327,75 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
             {
                 var oldResult = await App.ApiClient.GetLyricAsync(_currentTrack.Id);
                 var parsed = ParseLyricsFromOld(oldResult);
-                _dispatcher.TryEnqueue(() =>
-                {
-                    Lyrics = parsed;
-                    UpdateLyricIndex(0);
-                    OnPropertyChanged(nameof(HasLyrics));
-                    IsLyricsLoading = false;
-                });
+                _dispatcher.TryEnqueue(() => SetLyrics(parsed));
                 return;
             }
 
             var parsedNew = ParseLyrics(newResult);
-            _dispatcher.TryEnqueue(() =>
-            {
-                Lyrics = parsedNew;
-                UpdateLyricIndex(0);
-                OnPropertyChanged(nameof(HasLyrics));
-                IsLyricsLoading = false;
-            });
+            _dispatcher.TryEnqueue(() => SetLyrics(parsedNew));
         }
         catch
         {
             _dispatcher.TryEnqueue(() =>
             {
                 Lyrics = [];
+                _storedTranslations.Clear();
                 UpdateLyricIndex(0);
                 OnPropertyChanged(nameof(HasLyrics));
                 IsLyricsLoading = false;
             });
         }
+    }
+
+    private void SetLyrics(List<LyricLine> parsed)
+    {
+        _storedTranslations.Clear();
+
+        if (!_showLyricsTranslation)
+        {
+            for (int i = 0; i < parsed.Count; i++)
+            {
+                if (parsed[i].TranslatedText is { } text)
+                {
+                    _storedTranslations[i] = text;
+                    parsed[i].TranslatedText = null;
+                }
+            }
+        }
+
+        Lyrics = parsed;
+        UpdateLyricIndex(0);
+        OnPropertyChanged(nameof(HasLyrics));
+        IsLyricsLoading = false;
+    }
+
+    private void ApplyTranslationVisibility()
+    {
+        if (_lyrics.Count == 0) return;
+
+        if (_showLyricsTranslation)
+        {
+            foreach (var kv in _storedTranslations)
+            {
+                if (kv.Key < _lyrics.Count)
+                    _lyrics[kv.Key].TranslatedText = kv.Value;
+            }
+            _storedTranslations.Clear();
+        }
+        else
+        {
+            _storedTranslations.Clear();
+            for (int i = 0; i < _lyrics.Count; i++)
+            {
+                if (_lyrics[i].TranslatedText is { } text)
+                {
+                    _storedTranslations[i] = text;
+                    _lyrics[i].TranslatedText = null;
+                }
+            }
+        }
+
+        Lyrics = [.. _lyrics];
     }
 
     public async Task LoadAudioQualityAsync()
@@ -350,12 +409,12 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
 
         try
         {
-            var targetLevel = _currentTrack.ActualQualityLevel ?? MusicQualityToLevel(App.Settings.MusicQuality);
-            var detail = await App.ApiClient.GetSongMusicDetailAsync(_currentTrack.Id);
-            var quality = detail?.GetQuality(targetLevel);
-            var bitrate = quality?.Bitrate ?? _currentTrack.Br;
-            var sampleRate = quality?.SampleRate ?? _currentTrack.ActualSr;
-            var summary = FormatAudioQualitySummary(bitrate, sampleRate);
+            await Task.CompletedTask;
+            var summary = FormatAudioQualitySummary(
+                _currentTrack.Br,
+                _currentTrack.ActualSr,
+                _currentTrack.ActualChannels,
+                _currentTrack.ActualBitsPerSample);
 
             _dispatcher.TryEnqueue(() =>
             {
@@ -367,7 +426,11 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         {
             _dispatcher.TryEnqueue(() =>
             {
-                AudioQualitySummary = FormatAudioQualitySummary(_currentTrack.Br, _currentTrack.ActualSr);
+                AudioQualitySummary = FormatAudioQualitySummary(
+                    _currentTrack.Br,
+                    _currentTrack.ActualSr,
+                    _currentTrack.ActualChannels,
+                    _currentTrack.ActualBitsPerSample);
                 OnPropertyChanged(nameof(LeftMetadataLines));
             });
         }
@@ -375,42 +438,64 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
 
     private static List<LyricLine> ParseLyrics(NewLyricResult result)
     {
-        var lines = new List<LyricLine>();
         var original = ParseLrcString(result.Lrc);
-        var translated = ParseLrcString(result.Tlyric);
-
-        for (int i = 0; i < original.Count; i++)
+        if (original.Count == 0)
         {
-            var line = original[i];
-            if (i < translated.Count)
-            {
-                line.TranslatedText = translated[i].Text;
-            }
-
-            lines.Add(line);
+            original = ParseYrcString(result.Yrc);
         }
 
-        return lines;
+        var translated = ParseLrcString(result.Tlyric);
+        MergeTranslatedLyrics(original, translated);
+        return original;
     }
 
     private static List<LyricLine> ParseLyricsFromOld(LyricResult result)
     {
-        var lines = new List<LyricLine>();
         var original = ParseLrcString(result.Lyric);
+        if (original.Count == 0)
+        {
+            original = ParseYrcString(result.YrcLyric);
+        }
+
         var translated = ParseLrcString(result.TranslatedLyric);
+        MergeTranslatedLyrics(original, translated);
+        return original;
+    }
+
+    private static void MergeTranslatedLyrics(List<LyricLine> original, List<LyricLine> translated)
+    {
+        if (translated.Count == 0) return;
+
+        const double toleranceMs = 200;
+        var t = 0;
 
         for (int i = 0; i < original.Count; i++)
         {
-            var line = original[i];
-            if (i < translated.Count)
+            var origTime = original[i].Timestamp;
+
+            var bestT = t;
+            var bestDiff = Math.Abs((translated[t].Timestamp - origTime).TotalMilliseconds);
+
+            for (int j = t + 1; j < translated.Count; j++)
             {
-                line.TranslatedText = translated[i].Text;
+                var diff = Math.Abs((translated[j].Timestamp - origTime).TotalMilliseconds);
+                if (diff < bestDiff)
+                {
+                    bestDiff = diff;
+                    bestT = j;
+                }
+                else
+                {
+                    break;
+                }
             }
 
-            lines.Add(line);
+            if (bestDiff <= toleranceMs)
+            {
+                original[i].TranslatedText = translated[bestT].Text;
+                t = bestT;
+            }
         }
-
-        return lines;
     }
 
     private static List<LyricLine> ParseLrcString(string? lrc)
@@ -420,6 +505,14 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         {
             return lines;
         }
+
+        var offsetMs = 0;
+        var offsetMatch = System.Text.RegularExpressions.Regex.Match(lrc, @"\[offset:([+-]?\d+)\]");
+        if (offsetMatch.Success)
+        {
+            offsetMs = int.Parse(offsetMatch.Groups[1].Value);
+        }
+        var offsetTs = TimeSpan.FromMilliseconds(offsetMs);
 
         var rawLines = lrc.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (var rawLine in rawLines)
@@ -438,9 +531,55 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
                 var sec = int.Parse(m.Groups[2].Value);
                 var msStr = m.Groups[3].Value;
                 var ms = msStr.Length == 2 ? int.Parse(msStr) * 10 : int.Parse(msStr);
-                var ts = new TimeSpan(0, 0, min, sec, ms);
+                var ts = new TimeSpan(0, 0, min, sec, ms) + offsetTs;
                 lines.Add(new LyricLine { Timestamp = ts, Text = text });
             }
+        }
+
+        return lines.OrderBy(l => l.Timestamp).ToList();
+    }
+
+    private static List<LyricLine> ParseYrcString(string? yrc)
+    {
+        var lines = new List<LyricLine>();
+        if (string.IsNullOrWhiteSpace(yrc))
+        {
+            return lines;
+        }
+
+        var rawLines = yrc.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var rawLine in rawLines)
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            var headerMatch = System.Text.RegularExpressions.Regex.Match(line, @"^\[(\d+),(\d+)\]");
+            if (!headerMatch.Success)
+            {
+                continue;
+            }
+
+            var startMs = long.Parse(headerMatch.Groups[1].Value);
+            var content = line[headerMatch.Length..];
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                continue;
+            }
+
+            var text = System.Text.RegularExpressions.Regex.Replace(content, @"\(\d+,\d+,\d+\)", string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            lines.Add(new LyricLine
+            {
+                Timestamp = TimeSpan.FromMilliseconds(startMs),
+                Text = text
+            });
         }
 
         return lines.OrderBy(l => l.Timestamp).ToList();
@@ -481,9 +620,9 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         }
     }
 
-    private static string FormatAudioQualitySummary(long bitrate, long sampleRate)
+    private static string FormatAudioQualitySummary(long bitrate, long sampleRate, uint channelCount, uint bitsPerSample)
     {
-        if (bitrate <= 0 && sampleRate <= 0)
+        if (bitrate <= 0 && sampleRate <= 0 && channelCount == 0 && bitsPerSample == 0)
         {
             return string.Empty;
         }
@@ -499,16 +638,35 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
             parts.Add($"{sampleRate / 1000d:0.#} kHz");
         }
 
+        if (channelCount > 0)
+        {
+            parts.Add($"{channelCount} ch");
+        }
+
+        if (bitsPerSample > 0)
+        {
+            parts.Add($"{bitsPerSample}-bit");
+        }
+
         return string.Join(" / ", parts);
     }
 
-    private static string MusicQualityToLevel(long bitrate) => bitrate switch
+    private static async Task SaveSettingsAsync()
     {
-        >= 999000 => "lossless",
-        >= 320000 => "exhigh",
-        >= 192000 => "higher",
-        _ => "standard",
-    };
+        if (App.SettingsService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await App.SettingsService.SaveAsync(App.Settings);
+        }
+        catch
+        {
+            // Best-effort persistence for transient UI toggles.
+        }
+    }
 
     private void OnTrackChanged(object? sender, TrackInfo? track)
     {
@@ -519,6 +677,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(LikeGlyph));
             OnPropertyChanged(nameof(LeftMetadataLines));
             OnPropertyChanged(nameof(CurrentTrackName));
+            OnPropertyChanged(nameof(CurrentTrackAliasText));
             OnPropertyChanged(nameof(CurrentTrackArtistsText));
             OnPropertyChanged(nameof(CurrentTrackCoverUrl));
             OnPropertyChanged(nameof(CurrentTrackAlbumName));
@@ -597,6 +756,7 @@ public sealed class NowPlayingViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(LikeGlyph));
         OnPropertyChanged(nameof(LeftMetadataLines));
         OnPropertyChanged(nameof(CurrentTrackName));
+        OnPropertyChanged(nameof(CurrentTrackAliasText));
         OnPropertyChanged(nameof(CurrentTrackArtistsText));
         OnPropertyChanged(nameof(CurrentTrackCoverUrl));
         OnPropertyChanged(nameof(CurrentTrackAlbumName));

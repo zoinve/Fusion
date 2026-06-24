@@ -83,6 +83,7 @@ public interface INeteaseApiClient
     // ── Song / Track ───────────────────────────────────────────
     Task<IReadOnlyList<TrackUrlInfo>> GetSongUrlsAsync(string ids, long br = 999000, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TrackUrlInfo>> GetSongUrlsV1Async(string ids, string level = "exhigh", CancellationToken cancellationToken = default);
+    Task<string?> GetSongUrlV1RedirectAsync(long id, string level = "exhigh", bool unblock = true, CancellationToken cancellationToken = default);
     Task<SongMusicDetailResult?> GetSongMusicDetailAsync(long id, CancellationToken cancellationToken = default);
     Task<TrackDetailResult> GetTrackDetailAsync(string ids, CancellationToken cancellationToken = default);
     Task<LyricResult> GetLyricAsync(long id, CancellationToken cancellationToken = default);

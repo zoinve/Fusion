@@ -185,6 +185,7 @@ public sealed class SearchTypeViewModel : ObservableObject
                 {
                     Id = SafeGetLong(obj, "id"),
                     Name = SafeGetString(obj, "name"),
+                    AliasText = TryGetSongAlias(obj),
                     CoverUrl = NormalizeUrl(SafeGetNestedString(obj, "al", "picUrl")),
                     Subtitle = FormatSongSubtitle(obj),
                     Type = SearchItemType.Song,
@@ -247,6 +248,30 @@ public sealed class SearchTypeViewModel : ObservableObject
         {
             return string.Join(" / ", arr.Select(a => a?.GetValue<string>() ?? string.Empty).Where(s => s.Length > 0));
         }
+        return string.Empty;
+    }
+
+    private static string TryGetSongAlias(JsonObject obj)
+    {
+        static IEnumerable<string> Read(JsonNode? node)
+        {
+            return node is JsonArray arr
+                ? arr.Select(a => a?.GetValue<string>() ?? string.Empty).Where(static s => s.Length > 0)
+                : [];
+        }
+
+        foreach (var key in new[] { "alia", "alias", "tns" })
+        {
+            if (obj.TryGetPropertyValue(key, out var node))
+            {
+                var aliases = Read(node).ToList();
+                if (aliases.Count > 0)
+                {
+                    return string.Join(" / ", aliases);
+                }
+            }
+        }
+
         return string.Empty;
     }
 

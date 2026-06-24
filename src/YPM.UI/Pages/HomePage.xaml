@@ -41,12 +41,6 @@
                         Severity="Error" />
                 </StackPanel>
 
-                <ProgressRing
-                    Grid.Column="1"
-                    Width="36"
-                    Height="36"
-                    VerticalAlignment="Top"
-                    IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
             </Grid>
 
             <StackPanel Style="{StaticResource SectionContainerStyle}">

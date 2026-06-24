@@ -82,14 +82,6 @@
             Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
             Severity="Error" />
 
-        <ProgressRing
-            Grid.Row="1"
-            Width="48"
-            Height="48"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
-
         <ScrollViewer Grid.Row="1" x:Name="MainScrollViewer">
             <StackPanel
                 HorizontalAlignment="Stretch"
@@ -271,8 +263,10 @@
                                         <TextBlock
                                             FontSize="14"
                                             FontWeight="SemiBold"
-                                            Text="{x:Bind Name}"
-                                            TextTrimming="CharacterEllipsis" />
+                                            TextTrimming="CharacterEllipsis">
+                                            <Run Text="{x:Bind Name}" />
+                                            <Run Text="{x:Bind DisplayAliasText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </TextBlock>
                                         <TextBlock
                                             FontSize="12"
                                             Opacity="0.68"

@@ -3,7 +3,7 @@
 #define MyAppExeName "Fusion.exe"
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.1.2"
 #endif
 
 #ifndef SourceDir
